@@ -1,10 +1,31 @@
+include("mnist_training.jl")
+include(raw"plots.jl")
 using Flux
 using JuMP
 using HiGHS
 using LinearAlgebra
+using MLDatasets
+using Base.Iterators: partition
+using Statistics: mean
+using Flux.Data: DataLoader
+using Flux.Losses
 
 nn = Chain(Dense(28^2, 28, relu), Dense(28,28,relu), Dense(28,10)) 
 # input = rand([0,1], 28^2)
+
+# Prepare data and model
+train_X, train_y = MNIST(split=:train)[:]
+test_X, test_y = MNIST(split=:test)[:]
+
+train_X_binary = preprocess_binary(train_X)
+test_X_binary = preprocess_binary(test_X)
+
+train_y = onehot_labels(train_y)
+test_y = onehot_labels(test_y)
+
+nn = create_and_train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
+
+adversarial(nn, train_X_binary[:, 1], argmax(train_y[:,1]) - 1)
 
 function adversarial(nn::Chain, input::AbstractVector{<:Integer}, output, fix_inputs=Int[]; optimizer = HiGHS.Optimizer, objective = :satisfy, paranoid = false, kwargs...)
 	
@@ -28,10 +49,11 @@ function adversarial(nn::Chain, input::AbstractVector{<:Integer}, output, fix_in
 	status == JuMP.INFEASIBLE && return(:infeasible, input)
 	x = value.(ivars)
 	y = value.(ovars)
-	println("actual correct class: ", argmax(nn(input)))
-	println("optimal correct class: ", argmax(input))
+	println("actual correct class: ", output)
+	println("optimal correct class: ", argmax(y))
+	# println("optimal correct class: ", argmax(input))
 	x = [xᵢ > 0.5 ? 1 : -1 for xᵢ in x]
-	(:success, x)
+	(:success, x) 
 end
 
 function setup_layer!(mathopt_model, nn::Chain, ivars)
