@@ -23,7 +23,7 @@ test_X_binary = preprocess_binary(test_X)
 train_y = onehot_labels(train_y)
 test_y = onehot_labels(test_y)
 
-nn = create_and_train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
+nn = train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
 
 adversarial(nn, train_X_binary[:, 1], argmax(train_y[:,1]) - 1)
 
