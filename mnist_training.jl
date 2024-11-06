@@ -41,7 +41,7 @@ function train_nn(nn, train_X, train_y, test_X, test_y)
         end
         println("Epoch $epoch complete")
     end
-    println("Test Accuracy: ", accuracy(nn, test_X, test_y))
+    println("Test Accuracy: ", accuracy(nn, test_X, test_y) * 100, "%")
     nn
 end
 

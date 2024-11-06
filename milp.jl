@@ -26,11 +26,17 @@ test_y = onehot_labels(test_y)
 
 nn = train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
 
-adversarial(nn, train_X_binary[:, 1], argmax(train_y[:,1]) - 1)
+fix_inputs = collect(1:length(train_X_binary[:, 1]))
+adversarial(nn, train_X_binary[:, 1], argmax(train_y[:,1]) - 1, fix_inputs)
 
-function adversarial(nn::Chain, input::AbstractVector{<:Integer}, output, fix_inputs=Int[]; optimizer = HiGHS.Optimizer, objective = :satisfy, paranoid = false, kwargs...)
+function adversarial(nn::Chain, input::AbstractVector{<:Integer}, output, fix_inputs=Int[]; optimizer = HiGHS.Optimizer, objective = :satisfy, paranoid = false, verbose = false, kwargs...)
 	
 	mathopt_model = Model(HiGHS.Optimizer)
+
+	if !verbose
+		set_silent(mathopt_model)
+	end
+
 	ivars = @variable(mathopt_model, [1:length(input)], Bin) # our z vector
 	ovars = setup_layer!(mathopt_model, nn, ivars) 
 
@@ -121,12 +127,8 @@ function set_adversarial_objective!(mathopt_model, input::AbstractVector{<:Integ
 	end
 end
 
-
 # = Backward DFS =
 img = train_X_binary[:, 1]
 label_img = argmax(train_y[:,1]) - 1
-minimal_set_dfs(nn, img, label_img)
-
-#test
-test_array = [1, 2, 3, 4]
-# minimal_set_dfs(nn, test_array, 1)
+# minimal_set_dfs(nn, img, label_img)
+# minimal_set_dfs_optimized(nn, img, label_img)
