@@ -1,5 +1,6 @@
 include("mnist_training.jl")
 include(raw"plots.jl")
+include("backward_search.jl")
 using Flux
 using JuMP
 using HiGHS
@@ -50,7 +51,7 @@ function adversarial(nn::Chain, input::AbstractVector{<:Integer}, output, fix_in
 	x = value.(ivars)
 	y = value.(ovars)
 	println("actual correct class: ", output)
-	println("optimal correct class: ", argmax(y))
+	println("optimal correct class: ", argmax(y) - 1)
 	# println("optimal correct class: ", argmax(input))
 	x = [xᵢ > 0.5 ? 1 : -1 for xᵢ in x]
 	(:success, x) 
@@ -119,3 +120,13 @@ function set_adversarial_objective!(mathopt_model, input::AbstractVector{<:Integ
 		error("unknown objective option, $(objective), allowed: satisfy, minimal")
 	end
 end
+
+
+# = Backward DFS =
+img = train_X_binary[:, 1]
+label_img = argmax(train_y[:,1]) - 1
+minimal_set_dfs(nn, img, label_img)
+
+#test
+test_array = [1, 2, 3, 4]
+# minimal_set_dfs(nn, test_array, 1)
