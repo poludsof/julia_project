@@ -19,3 +19,22 @@ function plot_images(original_image::Matrix{Float32}, binary_image::BitMatrix)
     # Combine the two plots
     plot(p1, p2, layout=(1, 2), size=(900, 400))
 end
+
+function plot_mnist_with_active_pixels(mnist_vector::BitVector, active_indices::Set{Int})
+    img = reshape(mnist_vector, 28, 28)'
+
+    background_img = fill(RGB(0, 0, 0), 28, 28)
+    for i in 1:28, j in 1:28
+        background_img[i, j] = RGB(img[i, j], img[i, j], img[i, j])
+    end
+
+    for idx in active_indices
+        row = div(idx - 1, 28) + 1
+        col = (idx - 1) % 28 + 1
+
+        red_intensity = 0.6 + 0.4 * img[row, col]
+        background_img[row, col] = RGB(red_intensity, 0, 0)
+    end
+
+    heatmap(background_img, axis = false, color = :auto)
+end

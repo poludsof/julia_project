@@ -11,6 +11,7 @@ using Base.Iterators: partition
 using Statistics: mean
 using Flux.Data: DataLoader
 using Flux.Losses
+using StaticBitSets
 
 # === Create a neural network ===
 nn = Chain(Dense(28^2, 28, relu), Dense(28,28,relu), Dense(28,10)) 
@@ -31,19 +32,20 @@ nn = train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
 
 # argmax(nn(train_X_binary[:, 1])) - 1
 println("Train Accuracy: ", accuracy(nn, train_X_binary, train_y) * 100, "%")  # 98-99%
-println("Test Accuracy: ", accuracy(nn, test_X_binary, test_y) * 100, "%")     # 96%
+println("Test Accuracy: ", accuracy(nn, test_X_binary, test_y) * 100, "%")     # 95-96%
 
 
 # === Try to find adversarial img ===
-fix_inputs = collect(4:784)
-adversarial(nn, train_X_binary[:, 1], argmax(train_y[:,1]) - 1, fix_inputs)
+fix_inputs = collect(4:780)
+adversarial(nn, train_X_binary[:, 1], argmax(train_y[:, 1]) - 1, fix_inputs)
 
 
 # === Backward DFS ===
 img = train_X_binary[:, 1]
 label_img = argmax(train_y[:,1]) - 1
-minimal_set_dfs(nn, img, label_img)
-
+subset_min = minimal_set_dfs(nn, img, label_img) 
+#plot
+plot_mnist_with_active_pixels(train_X_binary[:, 1], Set(subset_min))
 
 # === Ploting ===
 image_original = train_X[:, :, 20]
