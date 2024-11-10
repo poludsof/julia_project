@@ -44,8 +44,11 @@ adversarial(nn, train_X_binary[:, 1], argmax(train_y[:, 1]) - 1, fix_inputs)
 img = train_X_binary[:, 1]
 label_img = argmax(train_y[:,1]) - 1
 subset_min = minimal_set_dfs(nn, img, label_img) 
+#check
+adversarial(nn, img, label_img, subset_min)
 #plot
 plot_mnist_with_active_pixels(train_X_binary[:, 1], Set(subset_min))
+
 
 # === Ploting ===
 image_original = train_X[:, :, 20]

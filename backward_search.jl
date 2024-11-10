@@ -67,13 +67,56 @@ function dfs_cache(nn, fix_inputs::Vector{Int}, input, output, steps::Int, max_s
     return best_set
 end
 
+function dfs_cache_non_recursive(nn, given_input_set::Vector{Int}, input, output, max_steps::Int)
+    visited = Set{Vector{Int}}()
+    stack = [(given_input_set, 0)]  # all (current subset, depth)
+    best_set = given_input_set
+
+    while !isempty(stack)
+        current_set, steps = pop!(stack)
+
+        if steps >= max_steps || in(current_set, visited)
+            continue
+        end
+
+        push!(visited, current_set) # mark the current subset as visited
+        status, _ = adversarial(nn, input, output, current_set)
+        println("TEST ON:", length(current_set), " status: ", status)
+
+        if status == :success
+            println("stop searching this branch")
+            continue
+        else
+            if length(current_set) < length(best_set)
+                best_set = current_set
+            end
+        end
+
+        if length(current_set) <= 770  # too long
+            break
+        end
+
+        for i in 1:length(current_set)
+            next_set = setdiff(current_set, [current_set[i]])  # remove one element
+
+            if length(next_set) <= 0
+                continue
+            end
+
+            push!(stack, (next_set, steps + 1))
+        end
+    end
+
+    return best_set
+end
+
 function minimal_set_dfs(nn::Chain, input, output)
-    fix_inputs = collect(1:length(input))
+    given_input_set = collect(1:length(input))
     tmp_inputs = collect(1:4)
     println(tmp_inputs)
     global visited = Set{Vector{Int}}()
-    found_minimal_set = Ref(false)
-    result = dfs_cache(nn, fix_inputs, input, output, 0, 100, found_minimal_set)
-    # dfs(nn, fix_inputs, 1, input, output)
+    # result = dfs_cache(nn, given_input_set, input, output, 0, 100, Ref(false))
+    result = dfs_cache_non_recursive(nn, given_input_set, input, output, 100)
+    # dfs(nn, given_input_set, 1, input, output)
     return result
 end
