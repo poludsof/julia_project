@@ -1,33 +1,3 @@
-include("mnist_training.jl")
-include(raw"plots.jl")
-include("backward_search.jl")
-using Flux
-using JuMP
-using HiGHS
-using LinearAlgebra
-using MLDatasets
-using Base.Iterators: partition
-using Statistics: mean
-using Flux.Data: DataLoader
-using Flux.Losses
-
-nn = Chain(Dense(28^2, 28, relu), Dense(28,28,relu), Dense(28,10)) 
-# input = rand([0,1], 28^2)
-
-# Prepare data and model
-train_X, train_y = MNIST(split=:train)[:]
-test_X, test_y = MNIST(split=:test)[:]
-
-train_X_binary = preprocess_binary(train_X)
-test_X_binary = preprocess_binary(test_X)
-
-train_y = onehot_labels(train_y)
-test_y = onehot_labels(test_y)
-
-nn = train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
-
-fix_inputs = collect(1:length(train_X_binary[:, 1]))
-adversarial(nn, train_X_binary[:, 1], argmax(train_y[:,1]) - 1, fix_inputs)
 
 function adversarial(nn::Chain, input::AbstractVector{<:Integer}, output, fix_inputs=Int[]; optimizer = HiGHS.Optimizer, objective = :satisfy, paranoid = false, verbose = false, kwargs...)
 	
@@ -44,7 +14,7 @@ function adversarial(nn::Chain, input::AbstractVector{<:Integer}, output, fix_in
 		@constraint(mathopt_model, ivars[i] == input[i]) # first condition (zᵢ = xᵢ)
 	end 
 	
-	setup_output_constraints!(mathopt_model, ovars, argmax(nn(input)))
+	setup_output_constraints!(mathopt_model, ovars, output + 1) # correct_class(output) is an index of correct class
 
 	@objective(mathopt_model, Min, 0)
 
@@ -126,9 +96,3 @@ function set_adversarial_objective!(mathopt_model, input::AbstractVector{<:Integ
 		error("unknown objective option, $(objective), allowed: satisfy, minimal")
 	end
 end
-
-# = Backward DFS =
-img = train_X_binary[:, 1]
-label_img = argmax(train_y[:,1]) - 1
-# minimal_set_dfs(nn, img, label_img)
-# minimal_set_dfs_optimized(nn, img, label_img)
