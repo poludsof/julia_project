@@ -1,7 +1,3 @@
-include("mnist_training.jl")
-include(raw"plots.jl")
-include("backward_search.jl")
-include("milp.jl")
 using Flux
 using JuMP
 using HiGHS
@@ -12,6 +8,10 @@ using Statistics: mean
 using Flux.Data: DataLoader
 using Flux.Losses
 using StaticBitSets
+include("mnist_training.jl")
+include(raw"plots.jl")
+include("backward_search.jl")
+include("milp.jl")
 
 # === Create a neural network ===
 nn = Chain(Dense(28^2, 28, relu), Dense(28,28,relu), Dense(28,10)) 
@@ -43,14 +43,28 @@ adversarial(nn, train_X_binary[:, 1], argmax(train_y[:, 1]) - 1, fix_inputs)
 # === Backward DFS ===
 img = train_X_binary[:, 1]
 label_img = argmax(train_y[:,1]) - 1
-subset_min = minimal_set_dfs(nn, img, label_img) 
+subset_min = minimal_set_dfs(nn, img, label_img)
 #check
 adversarial(nn, img, label_img, subset_min)
 #plot
-plot_mnist_with_active_pixels(train_X_binary[:, 1], Set(subset_min))
+plot_set = Set([i for i in subset_min])
+plot_mnist_with_active_pixels(train_X_binary[:, 1], Set(plot_set))
+
+# given_input_set = SBitSet{2,UInt8}(1,2,8)
+println(visited_local)
+
 
 
 # === Ploting ===
 image_original = train_X[:, :, 20]
 image_binary = reshape(train_X_binary[:, 1], 28, 28)
 plot_images(image_original, image_binary)
+
+
+N = 8
+current_set = SBitSet{N, UInt8}(1, 3, 5)
+next_set = current_set ~ SBitSet{N, UInt8}([3])
+for i in current_set
+    next_set = current_set ~ SBitSet{N, UInt8}(i)
+    println(next_set)
+end
