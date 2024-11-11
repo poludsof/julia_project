@@ -8,6 +8,7 @@ using Statistics: mean
 using Flux.Data: DataLoader
 using Flux.Losses
 using StaticBitSets
+using TimerOutputs
 include("mnist_training.jl")
 include(raw"plots.jl")
 include("backward_search.jl")
@@ -40,6 +41,15 @@ fix_inputs = collect(4:780)
 adversarial(nn, train_X_binary[:, 1], argmax(train_y[:, 1]) - 1, fix_inputs)
 
 
+# === Ploting ===
+image_original = train_X[:, :, 20]
+image_binary = reshape(train_X_binary[:, 1], 28, 28)
+plot_images(image_original, image_binary)
+
+
+
+
+
 # === Backward DFS ===
 img = train_X_binary[:, 1]
 label_img = argmax(train_y[:,1]) - 1
@@ -50,21 +60,7 @@ adversarial(nn, img, label_img, subset_min)
 plot_set = Set([i for i in subset_min])
 plot_mnist_with_active_pixels(train_X_binary[:, 1], Set(plot_set))
 
-# given_input_set = SBitSet{2,UInt8}(1,2,8)
-println(visited_local)
-
-
-
-# === Ploting ===
-image_original = train_X[:, :, 20]
-image_binary = reshape(train_X_binary[:, 1], 28, 28)
-plot_images(image_original, image_binary)
-
-
-N = 8
-current_set = SBitSet{N, UInt8}(1, 3, 5)
-next_set = current_set ~ SBitSet{N, UInt8}([3])
-for i in current_set
-    next_set = current_set ~ SBitSet{N, UInt8}(i)
-    println(next_set)
-end
+# === Timer ===
+to = TimerOutput()
+@timeit to "milp" adversarial(nn, img, label_img, subset_min)
+show(to)

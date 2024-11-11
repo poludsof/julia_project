@@ -73,7 +73,8 @@ function dfs_cache_non_recursive(nn, given_input_set::SBitSet{N,T}, input, outpu
     best_set = given_input_set
 
     while !isempty(stack)
-        current_set, steps = pop!(stack)
+        @timeit to "pop!" current_set, steps = pop!(stack)
+        # current_set, steps = pop!(stack)
 
         if steps >= max_steps || in(current_set, visited_local)
             continue
@@ -81,7 +82,7 @@ function dfs_cache_non_recursive(nn, given_input_set::SBitSet{N,T}, input, outpu
 
         push!(visited_local, current_set) # mark the current subset as visited
 
-        status, _ = adversarial(nn, input, output, current_set)
+        @timeit to "milp" status, _ = adversarial(nn, input, output, current_set)
         println("TEST ON:", length(current_set), " status: ", status)
 
         if status == :success
@@ -91,7 +92,7 @@ function dfs_cache_non_recursive(nn, given_input_set::SBitSet{N,T}, input, outpu
             best_set = current_set
         end
 
-        # if length(current_set) <= 770  # too long
+        # if length(current_set) <= 760  # too long
         #     break
         # end
 
@@ -101,7 +102,7 @@ function dfs_cache_non_recursive(nn, given_input_set::SBitSet{N,T}, input, outpu
                 continue
             end
             
-            push!(stack, (next_set, steps + 1))
+            @timeit to "push!" push!(stack, (next_set, steps + 1))
         end
     end
 
@@ -111,6 +112,7 @@ end
 function minimal_set_dfs(nn::Chain, input, output)
     given_input_set = collect(1:length(input))
     tmp_inputs = collect(1:4)
+
     input_set = SBitSet{32, UInt32}(given_input_set)
     # result = dfs_cache(nn, given_input_set, input, output, 0, 100, Ref(false))
     result = dfs_cache_non_recursive(nn, input_set, input, output, 100)
