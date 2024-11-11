@@ -1,3 +1,5 @@
+module Subset_minimal_search
+
 using Flux
 using JuMP
 using HiGHS
@@ -64,3 +66,5 @@ plot_mnist_with_active_pixels(train_X_binary[:, 1], Set(plot_set))
 to = TimerOutput()
 @timeit to "milp" adversarial(nn, img, label_img, subset_min)
 show(to)
+
+end
