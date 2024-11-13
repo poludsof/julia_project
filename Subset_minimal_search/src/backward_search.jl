@@ -1,3 +1,16 @@
+struct Backward_search{NN, I, O}
+    nn::NN
+    inputs::I
+    output::O
+end
+
+
+## TODO try this notation:
+# function (h::Heuristic)(fix_inputs)
+#     .....
+#     fix_inputs
+# end
+
 
 """ no longer in use """
 function dfs(nn::Chain, fix_inputs::Vector{Int}, start::Int, input::AbstractVector{<:Integer}, output::Int)
@@ -20,16 +33,17 @@ function dfs(nn::Chain, fix_inputs::Vector{Int}, start::Int, input::AbstractVect
     best_set
 end
 
+
 """ problem with found_minimal_set ? useless? """ # TODO
 # global visited = Set{Vector{Int}}()
-function dfs_cache(nn::Chain, given_input_set::Vector{Int}, input::AbstractVector{<:Integer}, output::Int, steps::Int, max_steps::Int, found_minimal_set::Bool)
+function dfs_cache(bs::Backward_search, given_input_set::Vector{Int}, steps::Int, max_steps::Int, found_minimal_set::Bool)
     if steps >= max_steps || found_minimal_set || in(given_input_set, visited)
         return given_input_set
     end
 
     push!(visited, given_input_set)
 
-    status, _ = adversarial(nn, input, output, given_input_set)
+    status, _ = adversarial(bs.nn, bs.input, bs.output, given_input_set)
     println("TEST ON:", length(given_input_set), " status: ", status)
     
     if status == :success
@@ -47,7 +61,7 @@ function dfs_cache(nn::Chain, given_input_set::Vector{Int}, input::AbstractVecto
 
     for i in 1:length(given_input_set) 
         next_set = setdiff(given_input_set, [given_input_set[i]])
-        new_fix_inputs = dfs_cache(nn, next_set, input, output, steps + 1, max_steps, found_minimal_set)
+        new_fix_inputs = dfs_cache(bs, next_set, steps + 1, max_steps, found_minimal_set)
         
         if found_minimal_set
             return new_fix_inputs
@@ -61,8 +75,9 @@ function dfs_cache(nn::Chain, given_input_set::Vector{Int}, input::AbstractVecto
     return best_set
 end
 
+
 """ Function using a non-recursive method, but with a stack and an array of visited sets """
-function dfs_cache_non_recursive(nn::Chain, given_input_set::SBitSet{N,T}, input::AbstractVector{<:Integer}, output::Int, max_steps::Int) where {N, T}
+function dfs_cache_non_recursive(bs::Backward_search, given_input_set::SBitSet{N,T}, max_steps::Int) where {N, T}
     visited_local = Set{SBitSet{N,T}}()
     stack = [(given_input_set, 0)]  # all (current subset, depth)
     best_set = given_input_set
@@ -81,7 +96,7 @@ function dfs_cache_non_recursive(nn::Chain, given_input_set::SBitSet{N,T}, input
 
         # samplovani
         if length(current_set) <= 760
-            @timeit to "random" adv_founded = check_random_sets(nn, input, output, current_set)
+            @timeit to "random" adv_founded = check_random_sets(bs, current_set)
             println("Random search result: ", adv_founded)
             if adv_founded
                 # println("Random set FOUND")
@@ -93,7 +108,7 @@ function dfs_cache_non_recursive(nn::Chain, given_input_set::SBitSet{N,T}, input
             break
         end
 
-        @timeit to "milp" status, _ = adversarial(nn, input, output, current_set)
+        @timeit to "milp" status, _ = adversarial(bs.nn, bs.input, bs.output, current_set)
         println("TEST ON:", length(current_set), " status: ", status)
 
         if status == :success
@@ -116,15 +131,16 @@ function dfs_cache_non_recursive(nn::Chain, given_input_set::SBitSet{N,T}, input
     return best_set
 end
 
+
 """ Simple function that removes features without going back (not dfs) """
-function tmp_backward(nn::Chain, given_input_set::SBitSet{N,T}, input::AbstractVector{<:Integer}, output::Int) where {N, T}
+function tmp_backward(bs::Backward_search, given_input_set::SBitSet{N,T}) where {N, T}
     for i in given_input_set
         # println("i: ", i)
         if length(given_input_set) <= 700 # too long; TODO delete later
             break
         end
         
-        status = check_random_sets(nn, input, output, given_input_set)
+        status = check_random_sets(bs, given_input_set)
         # if status == false
         #     status, _ = adversarial(nn, input, output, given_input_set)
         # end
@@ -154,11 +170,11 @@ function generate_unique_random_img_sets(input::AbstractVector{<:Integer}, curre
     return collect(unique_sets)
 end
 
-function check_random_sets(nn::Chain, input::AbstractVector{<:Integer}, output::Int, current_set::SBitSet{N,T}) where {N, T}
-    number_sets = 2 ^ (length(input) - length(current_set))
+function check_random_sets(bs::Backward_search, current_set::SBitSet{N,T}) where {N, T}
+    number_sets = 2 ^ (length(bs.input) - length(current_set))
     number_sets = (number_sets > 1000 || number_sets == 0) ? 1000 : number_sets
     # println("Number of sets: ", number_sets)
-    unique_sets = generate_unique_random_img_sets(input, current_set, number_sets)
+    unique_sets = generate_unique_random_img_sets(bs.input, current_set, number_sets)
 
     ## Try to replace this:
     # for img in unique_sets
@@ -168,19 +184,19 @@ function check_random_sets(nn::Chain, input::AbstractVector{<:Integer}, output::
     # end
 
     ## with this:
-    any(img -> argmax(nn(img))-1 != output, unique_sets)
+    any(img -> argmax(nn(img))-1 != bs.output, unique_sets)
 
     return false
 end
 
-function minimal_set_search(nn::Chain, input::AbstractVector{<:Integer}, output::Int)
-    given_input_set = collect(1:length(input))
+function minimal_set_search(bs::Backward_search)
+    given_input_set = collect(1:length(bs.input))
     tmp_inputs = collect(1:4)
     input_set = SBitSet{32, UInt32}(given_input_set)
     
-    # result = dfs_cache(nn, given_input_set, input, output, 0, 100, Ref(false))
-    # result = dfs_cache_non_recursive(nn, input_set, input, output, 100)
-    # dfs(nn, given_input_set, 1, input, output)
-    # result = tmp_backward(nn, input_set, input, output)
+    # result = dfs_cache(bs, given_input_set, 0, 100, false)
+    # result = dfs_cache_non_recursive(bs, input_set, 100)
+    # dfs(bs.nn, given_input_set, 1, bs.input, bs.output)
+    # result = tmp_backward(bs, input_set)
     return result
 end
