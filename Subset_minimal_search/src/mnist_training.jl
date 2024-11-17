@@ -49,7 +49,7 @@ function train_nn(nn, train_X, train_y, test_X, test_y)
     state_tree = Optimisers.setup(rule, nn);  # initialise this optimiser's momentum etc.
 
 
-    epochs = 10
+    epochs = 8
     for epoch in 1:epochs
         for (x, y) in train_data
             # Flux.train!(loss, Flux.params(nn), [(x, y)], opt)
