@@ -1,10 +1,10 @@
-include(raw"plots.jl")
-using Flux
-using MLDatasets
-using Base.Iterators: partition
-using Statistics: mean
-using Flux.Data: DataLoader
-using Flux.Losses
+# include(raw"plots.jl")
+# using Flux
+# using MLDatasets
+# using Base.Iterators: partition
+# using Statistics: mean
+# using Flux.Data: DataLoader
+# using Flux.Losses
 
 # Load data
 # train_X, train_y = MNIST(split=:train)[:]
@@ -30,6 +30,11 @@ function smoothed_crossentropy(pred, target, epsilon=0.1)
     return mean(Flux.Losses.logitcrossentropy(pred, smooth_target))
 end
 
+function input_drouput(x)
+    x = round.(x)
+    mod.(x .+ (rand(size(x)) .< 0.1), 2)
+end
+
 # Training
 function train_nn(nn, train_X, train_y, test_X, test_y)
     # nn = Chain(Dense(28^2, 128, relu), Dense(128, 64, relu), Dense(64, 10))
@@ -39,12 +44,18 @@ function train_nn(nn, train_X, train_y, test_X, test_y)
     # loss(x, y) = smoothed_crossentropy(nn(x), y)
     batch_size = 64
     train_data = DataLoader((train_X, train_y), batchsize=batch_size, shuffle=true)
-    opt = ADAM(0.001)
+    # opt = ADAM(0.001)
+    rule = Optimisers.Adam()  # use the Adam optimiser with its default settings
+    state_tree = Optimisers.setup(rule, nn);  # initialise this optimiser's momentum etc.
 
-    epochs = 20
+
+    epochs = 10
     for epoch in 1:epochs
         for (x, y) in train_data
-            Flux.train!(loss, Flux.params(nn), [(x, y)], opt)
+            # Flux.train!(loss, Flux.params(nn), [(x, y)], opt)
+            x = input_drouput(x)
+            ∇nn = Flux.Zygote.gradient(model -> Flux.Losses.logitcrossentropy(model(x), y), nn)[1]
+            state_tree, nn = Optimisers.update(state_tree, nn, ∇nn);
         end
         println("Epoch $epoch complete")
     end

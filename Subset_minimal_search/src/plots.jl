@@ -1,4 +1,3 @@
-using Plots
 
 function rotated_image(image::AbstractArray{T, 2}) where T
     rotated_image = zeros(T, 28, 28)

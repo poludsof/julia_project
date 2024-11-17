@@ -1,8 +1,3 @@
-struct Backward_search{NN, I, O}
-    nn::NN
-    inputs::I
-    output::O
-end
 
 
 ## TODO try this notation:
@@ -51,10 +46,10 @@ function dfs_cache(bs::Backward_search, given_input_set::Vector{Int}, steps::Int
         return given_input_set
     end
     
-    if length(given_input_set) <= 743 # too long; TODO delete later 
-        found_minimal_set = true
-        return given_input_set
-    end
+    # if length(given_input_set) <= 743 # too long; TODO delete later 
+    #     found_minimal_set = true
+    #     return given_input_set
+    # end
 
     # set is infeasible -> save as best set
     best_set = given_input_set
@@ -104,9 +99,9 @@ function dfs_cache_non_recursive(bs::Backward_search, given_input_set::SBitSet{N
             end
         end
 
-        if length(current_set) <= 710  # too long
-            break
-        end
+        # if length(current_set) <= 710  # too long
+        #     break
+        # end
 
         @timeit to "milp" status, _ = adversarial(bs.nn, bs.input, bs.output, current_set)
         println("TEST ON:", length(current_set), " status: ", status)
@@ -177,14 +172,14 @@ function check_random_sets(bs::Backward_search, current_set::SBitSet{N,T}) where
     unique_sets = generate_unique_random_img_sets(bs.input, current_set, number_sets)
 
     ## Try to replace this:
-    # for img in unique_sets
-    #     if argmax(nn(img))-1 != output
-    #         return true
-    #     end
-    # end
+    for img in unique_sets
+        if argmax(nn(img))-1 != output
+            return true
+        end
+    end
 
     ## with this:
-    any(img -> argmax(nn(img))-1 != bs.output, unique_sets)
+    any(argmax(nn(img))-1 != bs.output for img in unique_sets)
 
     return false
 end
@@ -196,7 +191,7 @@ function minimal_set_search(bs::Backward_search)
     
     # result = dfs_cache(bs, given_input_set, 0, 100, false)
     # result = dfs_cache_non_recursive(bs, input_set, 100)
-    # dfs(bs.nn, given_input_set, 1, bs.input, bs.output)
+    result = dfs(bs.nn, given_input_set, 1, bs.input, bs.output)
     # result = tmp_backward(bs, input_set)
     return result
 end
