@@ -52,8 +52,8 @@ println("Test Accuracy: ", accuracy(nn, test_X_binary, test_y) * 100, "%")     #
 
 
 # === Try to find adversarial img ===
-fix_inputs = collect(4:780)
-adversarial(nn, train_X_binary[:, 1], argmax(train_y[:, 1]) - 1, fix_inputs)
+# fix_inputs = collect(4:780)
+# adversarial(nn, train_X_binary[:, 1], argmax(train_y[:, 1]) - 1, fix_inputs)
 
 
 # === Ploting ===
@@ -65,30 +65,20 @@ plot_images(image_original, image_binary)
 
 
 
-# === Backward DFS ===
-img = train_X_binary[:, 1]
-label_img = argmax(train_y[:,1]) - 1
-
-
-subset_min = minimal_set_search(Subset_minimal(nn, img, label_img))
-#check
-adversarial(nn, img, label_img, subset_min)
-#plot
-plot_set = Set([i for i in subset_min])
-plot_mnist_with_active_pixels(train_X_binary[:, 1], Set(plot_set))
-
-# === Timer test===
-@timeit to "milp" adversarial(nn, img, label_img, ii_set)
-show(to)
+# subset_min = minimal_set_search(Subset_minimal(nn, img, label_img))
 
 # Test random sampling
-ii_set = SBitSet{32, UInt32}(81)
-best_set = get_best_best_sdp(Subset_minimal(nn, img, label_img), 0.5, 3)
+img = train_X_binary[:, 1]
+label_img = argmax(train_y[:,1]) - 1
+ii_set = SBitSet{32, UInt32}()
+threshold=0.5; num_best=5; num_samples=10
+best_set = get_best_best_sdp(Subset_minimal(nn, img, label_img), threshold, num_best, num_samples)
 println(best_set)
-calculate_sdp(Subset_minimal(nn, img, label_img), best_set)
+
+calculate_sdp(Subset_minimal(nn, img, label_img), best_set, num_samples)
+
 ii_set = best_set
 best_set = ii_set
-
 plot_set = Set([i for i in ii_set])
 plot_mnist_with_active_pixels(train_X_binary[:, 1], Set(plot_set))
 end
