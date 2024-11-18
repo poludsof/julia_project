@@ -21,10 +21,10 @@ end
 
 function calculate_sdp(sm::Subset_minimal, fix_inputs::SBitSet{N,T}) where {N, T}
     num_sets = 2 ^ (length(sm.input) - length(fix_inputs))
-    if num_sets < 1000 && num_sets > 0
+    if num_sets < 100 && num_sets > 0
         num_sets = num_sets
     else
-        num_sets = 1000
+        num_sets = 100
     end
     # println("Number of sets: ", num_sets)
 
@@ -89,8 +89,9 @@ function best_of_the_fisrt_best(sm::Subset_minimal, best_results::Array{Tuple{SB
     end
     return best_results
 end
+ 
 
-function get_best_sdp(sm::Subset_minimal, best_results::Array{Tuple{SBitSet{N,T}, Float32}}, num_best::Int) where {N, T}
+function get_best_sdp(sm::Subset_minimal, best_results::Array{Tuple{SBitSet{N,T}, Float32}}, num_best::Int) where{N, T}
     # fix_inputs = SBitSet{32, UInt32}()
 
     # print_sets(best_results)
@@ -108,18 +109,20 @@ function get_best_sdp(sm::Subset_minimal, best_results::Array{Tuple{SBitSet{N,T}
     return first_of_the_first
 end
 
-function get_best_best_sdp(sm::Subset_minimal, num_best::Int) where {N, T}
+function get_best_best_sdp(sm::Subset_minimal, threshold::Float64, num_best::Int)
     fix_inputs = SBitSet{32, UInt32}()
     the_most_first = first_bunch_of_best_sdp(sm, fix_inputs, num_best)
+    println("FIRST BEST SET: ")
+    print_sets(the_most_first)
 
     tmp = get_best_sdp(sm, the_most_first, num_best)
     println("THE END, best sdp: ", tmp[1][2])
 
     sdp_val = 0
     i = 0
-    while sdp_val < 0.9
+    while sdp_val < threshold
         tmp = get_best_sdp(sm, tmp, num_best)
-        println("THE END of ", i, " best sdp: ", tmp[1][2])    
+        println("THE END of $i best sdp: ", tmp[1][2])    
         i += 1
         sdp_val = tmp[1][2]
     end

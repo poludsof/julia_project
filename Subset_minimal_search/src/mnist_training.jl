@@ -1,14 +1,3 @@
-# include(raw"plots.jl")
-# using Flux
-# using MLDatasets
-# using Base.Iterators: partition
-# using Statistics: mean
-# using Flux.Data: DataLoader
-# using Flux.Losses
-
-# Load data
-# train_X, train_y = MNIST(split=:train)[:]
-# test_X, test_y = MNIST(split=:test)[:]
 
 function preprocess_binary(X, threshold=0.5)
     binary_X = Float32.(X) .>= threshold
@@ -32,12 +21,11 @@ end
 
 function input_drouput(x)
     x = round.(x)
-    mod.(x .+ (rand(size(x)) .< 0.1), 2)
+    mod.(x .+ (rand(size(x)) .< 0.2), 2)
 end
 
 # Training
 function train_nn(nn, train_X, train_y, test_X, test_y)
-    # nn = Chain(Dense(28^2, 128, relu), Dense(128, 64, relu), Dense(64, 10))
 
     # Loss and optimizer
     loss(x, y) = mean(Flux.Losses.logitcrossentropy(nn(x), y))
