@@ -4,11 +4,6 @@ function preprocess_binary(X, threshold=0.5)
     return reshape(binary_X, 28 * 28, size(binary_X, 3))
 end
 
-function preprocess_binary(X, threshold=0.5)
-    binary_X = Float32.(X) .>= threshold
-    return reshape(binary_X, 28 * 28, size(binary_X, 3))
-end
-
 function onehot_labels(y)
     return Flux.onehotbatch(y, 0:9)
 end

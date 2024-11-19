@@ -19,7 +19,27 @@ function random_sampling(sm::Subset_minimal, fix_inputs::SBitSet{N,T}, num_sets:
 end
 
 
+function calculate_ep(sm::Subset_minimal, fix_inputs::SBitSet{N, T}, num_samples::Int) where {N, T}
+    num_sets = 2 ^ (length(sm.input) - length(fix_inputs))
+    if num_sets < num_samples && num_sets > 0
+        num_sets = num_sets
+    else
+        num_sets = num_samples
+    end
+    
+    sampling_sets = random_sampling(sm, fix_inputs, num_sets)
+    total_probability = 0.0
+
+    for s in sampling_sets
+        total_probability += sm.nn(s)[sm.output + 1]
+    end
+
+    return total_probability / num_sets
+end
+
+
 function calculate_sdp(sm::Subset_minimal, fix_inputs::SBitSet{N,T}, num_samples::Int) where {N, T}
+    # println("Image: ", sm.output)
     num_sets = 2 ^ (length(sm.input) - length(fix_inputs))
     if num_sets < num_samples && num_sets > 0
         num_sets = num_sets
