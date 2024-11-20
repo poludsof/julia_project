@@ -64,23 +64,23 @@ plot_images(image_original, image_binary)
 
 
 
-
 # subset_min = minimal_set_search(Subset_minimal(nn, img, label_img))
 
 # Test random sampling
 img = test_X_binary[:, 9]
 label_img = argmax(test_y[:, 9]) - 1
 ii_set = SBitSet{32, UInt32}()
-threshold=0.99
+threshold=0.8
 num_best=3
-num_samples=100
-best_set = get_best_best_sdp(Subset_minimal(nn, img, label_img), threshold, num_best, num_samples)
-println(best_set)
+num_samples=70
 
-calculate_sdp(Subset_minimal(nn, img, label_img), best_set, num_samples)
+# calculate_sdp or calculate_ep
+best_set = get_minimal_set_generic(Subset_minimal(nn, img, label_img), calculate_ep, threshold, num_best, num_samples)
 
-ii_set = best_set
-best_set = ii_set
-plot_set = Set([i for i in ii_set])
-plot_mnist_with_active_pixels(img, Set(plot_set))
+# calculate_sdp(Subset_minimal(nn, img, label_img), best_set, num_samples)
+
+# ii_set = best_set
+# best_set = ii_set
+# plot_set = Set([i for i in ii_set])
+# plot_mnist_with_active_pixels(img, Set(plot_set))
 end
