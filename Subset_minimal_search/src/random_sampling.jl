@@ -1,69 +1,26 @@
 
-function generate_random_img_with_fix_inputs(sm::Subset_minimal, fix_inputs::SBitSet{N,T}) where {N, T}
-    return map(idx -> idx in fix_inputs ? sm.input[idx] : rand(0:1), 1:length(sm.input))
+function generate_random_img_with_fix_inputs(sm::Subset_minimal, fix_inputs::SBitSet, n::Int) 
+    generate_random_img_with_fix_inputs(sm, collect(fix_inputs), n)
 end
 
-
-function random_sampling(sm::Subset_minimal, fix_inputs::SBitSet{N,T}, num_sets::Int) where {N, T}
-    unique_sets = Set{Vector{Int}}()
-    
-    while length(unique_sets) < num_sets
-        new_set = generate_random_img_with_fix_inputs(sm, fix_inputs)
-        if !(new_set in unique_sets)
-            push!(unique_sets, new_set)
-        end
-    end
-    
-    # println("Number of unique sets: ", length(unique_sets))
-    return collect(unique_sets)
+function generate_random_img_with_fix_inputs(sm::Subset_minimal, ii::Vector{<:Integer}, n::Int) 
+    x = rand(0:1, length(sm.input), n)
+    x[ii, :] .= sm.input[ii]
+    x
 end
 
-
-
-function calculate_ep(sm::Subset_minimal, fix_inputs::SBitSet{N, T}, num_samples::Int) where {N, T}
-    num_sets = 2 ^ (length(sm.input) - length(fix_inputs))
-    if num_sets < num_samples && num_sets > 0
-        num_sets = num_sets
-    else
-        num_sets = num_samples
-    end
-    
-    sampling_sets = random_sampling(sm, fix_inputs, num_sets)
-    total_probability = 0.0
-
-    for s in sampling_sets
-        total_probability += softmax(sm.nn(s))[sm.output + 1]
-    end
-
-    return total_probability / num_sets
+function calculate_ep(sm::Subset_minimal, fix_inputs::SBitSet, num_samples::Int)
+    x = generate_random_img_with_fix_inputs(sm, fix_inputs, num_samples)
+    mean(Flux.softmax(sm.nn(x))[sm.output + 1,:] )
 end
-
 
 function calculate_sdp(sm::Subset_minimal, fix_inputs::SBitSet{N,T}, num_samples::Int) where {N, T}
-    # println("Image: ", sm.output)
-    num_sets = 2 ^ (length(sm.input) - length(fix_inputs))
-    if num_sets < num_samples && num_sets > 0
-        num_sets = num_sets
-    else
-        num_sets = num_samples
-    end
-    # println("Number of sets: ", num_sets)
-
-    sampling_sets = random_sampling(sm, fix_inputs, num_sets)
-    # println("Number of sampling sets: ", length(sampling_sets))
-    correct_classified = 0
-    for s in sampling_sets
-        if argmax(sm.nn(s)) - 1 == sm.output
-            correct_classified += 1
-        end
-    end
-    
-    # println("Correct classified: ", correct_classified)
-    return correct_classified / num_sets
+    x = generate_random_img_with_fix_inputs(sm, fix_inputs, num_samples)
+    mean(Flux.onecold(nn(x)) .== sm.output + 1)
 end
 
 
-function search_sets(sm::Subset_minimal, calc_func::Function, fix_inputs::SBitSet{N, T}, num_best::Int, num_samples::Int, best_results=Array{Tuple{SBitSet{N, T}, Float32}, 1}()) where {N, T}
+function beam_search(sm::Subset_minimal, calc_func::Function, fix_inputs::SBitSet{N, T}, num_best::Int, num_samples::Int, best_results=Array{Tuple{SBitSet{N, T}, Float32}, 1}()) where {N, T}
     worst_from_best_ep = isempty(best_results) ? 0.0 : best_results[end][2]
 
     for i in 1:length(sm.input)
@@ -87,11 +44,11 @@ end
  
 
 function generate_array_of_top_sets(sm::Subset_minimal, calc_func::Function, best_results::Array{Tuple{SBitSet{N,T}, Float32}}, num_best::Int, num_samples::Int) where{N, T}
-    first_of_the_first = search_sets(sm, calc_func, best_results[end][1], num_best, num_samples)
+    first_of_the_first = beam_search(sm, calc_func, best_results[end][1], num_best, num_samples)
     pop!(best_results)
 
     for bs in best_results
-        first_of_the_first = search_sets(sm, calc_func, bs[1], num_best, num_samples, first_of_the_first)
+        first_of_the_first = beam_search(sm, calc_func, bs[1], num_best, num_samples, first_of_the_first)
     end
 
     return first_of_the_first
@@ -103,7 +60,7 @@ end
 # 2)calculate_sdp
 function get_minimal_set_generic(sm::Subset_minimal, calc_func::Function, threshold=0.9, num_best=5, num_samples=100)
     fix_inputs = SBitSet{32, UInt32}()
-    the_most_first = search_sets(sm, calc_func, fix_inputs, num_best, num_samples)
+    the_most_first = beam_search(sm, calc_func, fix_inputs, num_best, num_samples)
     println("FIRST BEST SETS: ")
     print_sets(the_most_first)
 
