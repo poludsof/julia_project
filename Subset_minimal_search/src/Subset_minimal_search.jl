@@ -9,9 +9,12 @@ using Base.Iterators: partition
 using Statistics: mean
 using StaticBitSets
 using TimerOutputs
-using Plots
 using Optimisers
 using MLUtils: DataLoader
+using CairoMakie
+using Makie
+# import CairoMakie
+# import Makie
 
 const to = TimerOutput()
 
@@ -31,8 +34,5 @@ include("random_sampling.jl")
 
 # calculate_sdp(Subset_minimal(nn, img, label_img), best_set, num_samples)
 
-# ii_set = best_set
-# best_set = ii_set
-# plot_set = Set([i for i in ii_set])
-# plot_mnist_with_active_pixels(img, Set(plot_set))
+
 end

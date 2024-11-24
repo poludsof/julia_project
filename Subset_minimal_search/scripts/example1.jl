@@ -3,6 +3,8 @@ using Subset_minimal_search
 using Subset_minimal_search.Flux
 using Subset_minimal_search.MLDatasets
 using Subset_minimal_search.StaticBitSets
+using Subset_minimal_search.Makie
+using Subset_minimal_search.CairoMakie
 
 using Subset_minimal_search: preprocess_binary, onehot_labels, accuracy, get_minimal_set_generic, Subset_minimal
 
@@ -34,8 +36,9 @@ println("Test Accuracy: ", accuracy(nn, test_X_binary, test_y) * 100, "%")     #
 
 
 # === Ploting ===
-image_original = train_X[:, :, 2]
-image_binary = reshape(train_X_binary[:, 2], 28, 28)
+using Subset_minimal_search: plot_images, test_makie
+image_original = train_X[:, :, 1]
+image_binary = reshape(train_X_binary[:, 1], 28, 28)
 plot_images(image_original, image_binary)
 
 
@@ -44,13 +47,19 @@ plot_images(image_original, image_binary)
 # subset_min = minimal_set_search(Subset_minimal(nn, img, label_img))
 
 # Test random sampling
-img = test_X_binary[:, 9]
-label_img = argmax(test_y[:, 9]) - 1
+img = test_X_binary[:, 2]
+label_img = argmax(test_y[:, 2]) - 1
 ii_set = SBitSet{32, UInt32}()
 threshold=0.1
 num_best=3
 num_samples=70
 
-using Subset_minimal_search: calculate_ep, calculate_sep
-# calculate_sdp or calculate_ep
+using Subset_minimal_search: plot_images# calculate_sdp or calculate_ep
 best_set = get_minimal_set_generic(Subset_minimal(nn, img, label_img), calculate_ep, threshold, num_best, num_samples)
+
+
+test_makie(img, Set(plot_set))
+ii_set = best_set
+best_set = ii_set
+plot_set = Set([i for i in ii_set])
+plot_mnist_with_active_pixels(img, Set(plot_set))
