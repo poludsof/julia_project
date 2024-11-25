@@ -13,6 +13,8 @@ using Optimisers
 using MLUtils: DataLoader
 using CairoMakie
 using Makie
+using Makie.Colors
+
 # import CairoMakie
 # import Makie
 
