@@ -168,7 +168,33 @@ function minimal_set_search(sm::Subset_minimal)
     
     # result = dfs_cache(sm, given_input_set, 0, 100, false)
     # result = dfs_cache_non_recursive(sm, input_set, 100)
-    result = dfs(sm.nn, given_input_set, 1, sm.input, sm.output)
+    # result = dfs(sm.nn, given_input_set, 1, sm.input, sm.output)
     # result = tmp_backward(sm, input_set)
     return result
+end
+
+
+function backward_sdp(sm::Subset_minimal, given_input_set::SBitSet, steps = 0)
+    stack = [(given_input_set, 0)]  # all (current subset, depth)
+    max_steps = 100
+    while !isempty(stack)
+		steps += 1
+		steps > max_steps && break
+
+		rᵢ, fᵢ = @timeit to "pop!" pop!(stack)
+		if fᵢ > length(bs.r)
+			push!(bs.solutions, rᵢ)
+			println("I have find a solution", rᵢ)
+			continue
+		end
+
+		@timeit to "push!" push!(stack, (rᵢ, fᵢ + 1))
+		rᵢ = BruteForcer.deactivate(rᵢ, fᵢ)
+		v = isprimeimplicant(rᵢ, bs.yₛ, bs.model, bs.search_stats; batchsize = bs.batchsize, false_negative_rate = 1e-3)
+		if v
+			@timeit to "push!" push!(stack, (rᵢ, fᵢ + 1))
+		end
+
+	end
+	return(steps)
 end

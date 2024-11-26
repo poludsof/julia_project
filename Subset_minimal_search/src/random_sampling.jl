@@ -21,19 +21,19 @@ end
 
 
 function beam_search(sm::Subset_minimal, calc_func::Function, fix_inputs::SBitSet{N, T}, num_best::Int, num_samples::Int, best_results=Array{Tuple{SBitSet{N, T}, Float32}, 1}()) where {N, T}
-    worst_from_best_ep = isempty(best_results) ? 0.0 : best_results[end][2]
+    worst_from_best_threshold = isempty(best_results) ? 0.0 : best_results[end][2]
 
     for i in 1:length(sm.input)
         if !(i in fix_inputs)
             new_set = SBitSet{N, T}()
             new_set = union(fix_inputs, SBitSet{32, UInt32}(i))
-            ep = calc_func(sm, new_set, num_samples)
-            if ep >= worst_from_best_ep
-                push!(best_results, (new_set, ep))
+            threshold = calc_func(sm, new_set, num_samples)
+            if threshold >= worst_from_best_threshold
+                push!(best_results, (new_set, threshold))
                 if length(best_results) > num_best
                     sort!(best_results, by=x->x[2], rev=true)
                     pop!(best_results)
-                    worst_from_best_ep = best_results[end][2]
+                    worst_from_best_threshold = best_results[end][2]
                 end
             end
         end
@@ -73,7 +73,7 @@ function get_minimal_set_generic(sm::Subset_minimal, calc_func::Function, thresh
         tmp = generate_array_of_top_sets(sm, calc_func, tmp, num_best, num_samples)
         println("THE END of $i, best score: ", tmp[1][2])    
         i += 1
-        score_val = tmp[1][2]
+        score_val = tmp[1][2]  # get the best score
     end
     print_sets(tmp)
 

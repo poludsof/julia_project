@@ -42,9 +42,6 @@ image_binary = reshape(train_X_binary[:, 1], 28, 28)
 plot_images(image_original, image_binary)
 
 
-
-# subset_min = minimal_set_search(Subset_minimal(nn, img, label_img))
-
 # Test random sampling
 img = test_X_binary[:, 2]
 label_img = argmax(test_y[:, 2]) - 1
@@ -53,7 +50,7 @@ threshold=0.1
 num_best=3
 num_samples=70
 
-using Subset_minimal_search: plot_images, test_color2, plot_mnist_with_active_pixels
+using Subset_minimal_search: plot_mnist_with_active_pixels
 # calculate_sdp or calculate_ep
 best_set = get_minimal_set_generic(Subset_minimal(nn, img, label_img), calculate_ep, threshold, num_best, num_samples)
 
