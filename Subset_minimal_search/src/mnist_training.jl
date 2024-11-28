@@ -4,6 +4,11 @@ function preprocess_binary(X, threshold=0.5)
     return reshape(binary_X, 28 * 28, size(binary_X, 3))
 end
 
+function preprocess_bin_neg(data)
+    bin_data = 2 .* data .- 1
+    return reshape(bin_data, 28 * 28, size(bin_data, 3))
+end
+
 function onehot_labels(y)
     return Flux.onehotbatch(y, 0:9)
 end
