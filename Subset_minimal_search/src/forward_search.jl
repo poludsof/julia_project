@@ -19,3 +19,7 @@ function find_minimal_subset_forward(sm::Subset_minimal, given_input_set::SBitSe
     
     return SBitSet{N, T}()
 end
+
+function forward_search_dfs(sm::Subset_minimal, given_input_set::SBitSet{N,T}) where {N, T}
+
+end
