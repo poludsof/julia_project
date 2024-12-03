@@ -33,18 +33,11 @@ println("Train Accuracy: ", accuracy(model, train_X_bin_neg, train_y) * 100, "%"
 println("Test Accuracy: ", accuracy(model, test_X_bin_neg, test_y) * 100, "%")
 
 # Test random sampling
-img = train_X_bin_neg[:, 2]
-label_img = argmax(test_y[:, 2]) - 1
-ii_set = SBitSet{32, UInt32}(collect(1:7))
+img = train_X_bin_neg[:, 1]
+label_img = argmax(test_y[:, 1]) - 1
 threshold=0.1
 num_best=1
 num_samples=70
 
 # calculate_sdp or calculate_ep
 best_set = full_beam_search(Subset_minimal(model, img, label_img), sdp_full, threshold, num_best, num_samples)
-
-tmpI3 = SBitSet{32, UInt32}(1)  # Example input for ii
-tmpI2 = SBitSet{32, UInt32}(60) # Example input for jj
-
-# Assuming model and img are defined:
-result = sdp_partial(model[2], model[1](img), tmpI3, tmpI2, num_samples)

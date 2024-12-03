@@ -25,13 +25,13 @@ function sdp_partial(model, img, ii, jj, num_samples) # ii = I2 --> jj = I1
     jj = collect(jj)
 	x = rand([-1,1], length(img), num_samples)
 	x[ii,:] .= img[ii]
-    println("length:", model(x)[:, 1])
 	mean(model(x)[jj, :] .== model(img)[jj, :])
 end
 
 
 function beam_search(sm::Subset_minimal, calc_func::Function, fix_inputs::SBitSet{N, T}, num_best::Int, num_samples::Int, best_results=Array{Tuple{SBitSet{N, T}, Float32}, 1}()) where {N, T}
     worst_from_best_threshold = isempty(best_results) ? 0.0 : best_results[end][2]
+    # println("Worst from best threshold: ", worst_from_best_threshold)
 
     for i in 1:length(sm.input)
         if !(i in fix_inputs)
@@ -121,12 +121,18 @@ function full_beam_search(sm::Subset_minimal, calc_func::Function, threshold=0.9
     # sdp_partial(sm.nn[1:2], sm.input, first_i_I3[1][1], first_i_I2[1][1], 10000)
     I1 = part_beam_search_I3(sm, calc_func, I1, num_best, num_samples)
 
-    # println("I3:", I3[1][1], " I2:", I2[1][1], " I1:", I1[1][1])
-    heuristic_val = heuristic(sm.nn, sm.input, (I3[1][1], I2[1][1], I1[1][1]))
-    println("Heuristic value: ", heuristic_val)
+    # heuristic_val = heuristic(sm.nn, sm.input, (I3[1][1], I2[1][1], I1[1][1]))
+    # println("Heuristic value: ", heuristic_val)
+    I3 = beam_search(sm, calc_func, I3[1][1], num_best, num_samples)
+    I2 = part_beam_search_I2(sm, calc_func, I2[1][1], num_best, num_samples)
+    I1 = part_beam_search_I3(sm, calc_func, I1[1][1], num_best, num_samples)
+
+    println("I1:", I1)
+
+    # full_error = 0.0
 
     # i = 1
-    # while heuristic_val < threshold
+    # while full_error > 5
     #     I3 = beam_search(sm, calc_func, I3, num_best, num_samples)
     #     I2 = part_beam_search_I2(sm, calc_func, I2, num_best, num_samples)
     #     I1 = part_beam_search_I3(sm, calc_func, I1, num_best, num_samples)
@@ -143,23 +149,14 @@ end
 
 
 function heuristic(model, xp, (I3, I2, I1))
-    println("ALLO")
 	# independent criteria
-    sdp_full(model, xp, I3, 1000) +
-    sdp_full(model[2:3], model[1](xp), I2, 1000) +
-    sdp_full(model[3], model[1:2](xp), I1, 100) +
-    sdp_partial(model[1], xp, I3, I2, 100) +
-    sdp_partial(model[1:2], xp, I3, I1, 100) +
-    sdp_partial(model[2], model[1](xp), I2, I1, 100)
-
-
-	# max(0, 0.95 - sdp_full(model, xp, I3, 1000)) +
-	# max(0, 0.95 - sdp_full(model[2:3], model[1](xp), I2, 100)) +
-	# max(0, 0.95 - sdp_full(model[3], model[1:2](xp), I1, 100)) +
-	# # independent criteria
-	# max(0, 0.95 - sdp_partial(model[1], xp, I3, I2, 100)) +
-	# max(0, 0.95 - sdp_partial(model[1:2], xp, I3, I1, 100)) +
-	# max(0, 0.95 - sdp_partial(model[2:3], model[1](xp), I2, I1, 100))
+	max(0, 0.95 - sdp_full(model, xp, I3, 1000)) +
+	max(0, 0.95 - sdp_full(model[2:3], model[1](xp), I2, 100)) +
+	max(0, 0.95 - sdp_full(model[3], model[1:2](xp), I1, 100)) +
+	# independent criteria
+	max(0, 0.95 - sdp_partial(model[1], xp, I3, I2, 100)) +
+	max(0, 0.95 - sdp_partial(model[1:2], xp, I3, I1, 100)) +
+	max(0, 0.95 - sdp_partial(model[2], model[1](xp), I2, I1, 100))
 end
 
 
