@@ -42,5 +42,3 @@ num_samples=70
 
 # calculate_sdp or calculate_ep
 best_set = full_beam_search(Subset_minimal(model, img, label_img), sdp_full, threshold, num_best, num_samples)
-
-tmp_x = rand([-1,1], 10, 1)

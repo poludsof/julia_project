@@ -3,24 +3,29 @@ function generate_random_img_with_fix_inputs(sm::Subset_minimal, fix_inputs::SBi
     generate_random_img_with_fix_inputs(sm, collect(fix_inputs), n)
 end
 
-function generate_random_img_with_fix_inputs(sm::Subset_minimal, ii::Vector{<:Integer}, n::Int) 
+function generate_random_img_with_fix_inputs(model, input, ii::Vector{<:Integer}, n::Int) 
     # x = rand(0:1, length(sm.input), n)
     # x[ii, :] .= sm.input[ii]
     # x
     x = rand([-1,1], length(sm.input), n)
 	x[ii,:] .= sm.input[ii]
-    x
+    x 
 end
 
-function sdp_full(sm, fix_inputs, num_samples)
-    x = generate_random_img_with_fix_inputs(sm, fix_inputs, num_samples)
-    mean(Flux.onecold(sm.nn(x)) .== sm.output + 1)
+function sdp_full(model, img, ii, num_samples)
+    # x = generate_random_img_with_fix_inputs(model, input, fix_inputs, num_samples)
+    ii = collect(ii)
+    x = rand([-1,1], length(img), num_samples)
+	x[ii,:] .= img[ii]
+	mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
 end
 
-function sdp_partial(sm::Subset_minimal, previous_layer_fix_inputs::SBitSet{N,T}, this_layer_fix_inputs::SBitSet{N,T}, num_samples::Int) where {N, T}
-    # function criterium_partial(model, xp, ii, jj)
-    x = generate_random_img_with_fix_inputs(sm, fix_inputs, num_samples)
-    mean(model(x)[jj,:] .== model(sm.input)[jj,:])
+function sdp_partial(model, img, ii, jj, num_samples) # ii = I3 __ jj = I2
+    ii = collect(ii)
+    jj = collect(jj)
+	x = rand([-1,1], length(img), num_samples)
+	x[ii,:] .= img[ii]
+	mean(model(x)[jj, :] .== model(img)[jj, :])
 end
 
 
@@ -29,11 +34,34 @@ function beam_search(sm::Subset_minimal, calc_func::Function, fix_inputs::SBitSe
 
     for i in 1:length(sm.input)
         if !(i in fix_inputs)
-            new_set = SBitSet{N, T}()
-            new_set = union(fix_inputs, SBitSet{32, UInt32}(i))
-            threshold = sdp_full(sm, new_set, num_samples) # criteruim (ep/sdp)
+            new_set_I = SBitSet{N, T}()
+            new_set_I = union(fix_inputs, SBitSet{32, UInt32}(i))
+            threshold = sdp_full(sm.nn, sm.input, new_set_I, num_samples) # criteruim (ep/sdp)
             if threshold >= worst_from_best_threshold
-                push!(best_results, (new_set, threshold))
+                push!(best_results, (new_set_I, threshold))
+                if length(best_results) > num_best
+                    sort!(best_results, by=x->x[2], rev=true)
+                    pop!(best_results)
+                    worst_from_best_threshold = best_results[end][2]
+                end
+            end
+        end
+    end
+
+    return best_results
+end
+
+
+function part_beam_search_I2(sm::Subset_minimal, calc_func::Function, I3, I2::SBitSet{N, T}, num_best::Int, num_samples::Int, best_results=Array{Tuple{SBitSet{N, T}, Float32}, 1}()) where {N, T}
+    worst_from_best_threshold = isempty(best_results) ? 0.0 : best_results[end][2]
+
+    for i in 1:256
+        if !(i in I2)
+            new_set_I = SBitSet{N, T}()
+            new_set_I = union(I2, SBitSet{32, UInt32}(i))
+            threshold = sdp_full(sm.nn[1:2], sm.nn[1](sm.input), new_set_I, num_samples) # criteruim (ep/sdp)
+            if threshold >= worst_from_best_threshold
+                push!(best_results, (new_set_I, threshold))
                 if length(best_results) > num_best
                     sort!(best_results, by=x->x[2], rev=true)
                     pop!(best_results)
@@ -61,12 +89,13 @@ end
 
 function full_beam_search(sm::Subset_minimal, calc_func::Function, threshold=0.9, num_best=1, num_samples=100)
     I3 = SBitSet{32, UInt32}()
-    # I2 = SBitSet{32, UInt32}()
-    # I1 = SBitSet{32, UInt32}()
+    I2 = SBitSet{32, UInt32}()
+    I1 = SBitSet{32, UInt32}()
 
     first_i_I3 = beam_search(sm, calc_func, I3, num_best, num_samples) # {1, 456, 752}
-    
-    println("done")
+    first_i_I2 = part_beam_search(sm, calc_func, first_i_I3, I2, num_best, num_samples) # {1, 456, 752}
+    # println(first_i_I2)
+    sdp_partial(sm.nn[1:2], sm.input, first_i_I3[1][1], first_i_I2[1][1], 10000)
 
     # tmp = generate_array_of_top_sets(sm, calc_func, first_i_I3, num_best, num_samples)
     # score_val = 0.0
