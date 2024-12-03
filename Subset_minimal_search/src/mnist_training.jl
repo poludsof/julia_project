@@ -5,8 +5,8 @@ function preprocess_binary(X, threshold=0.5)
 end
 
 function preprocess_bin_neg(data)
-    bin_data = 2 .* data .- 1
-    return reshape(bin_data, 28 * 28, size(bin_data, 3))
+    bin_data_neg = 2 .* data .- 1
+    return bin_data_neg
 end
 
 function onehot_labels(y)

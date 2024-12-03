@@ -27,7 +27,7 @@ function beam_search(sm::Subset_minimal, calc_func::Function, fix_inputs::SBitSe
         if !(i in fix_inputs)
             new_set = SBitSet{N, T}()
             new_set = union(fix_inputs, SBitSet{32, UInt32}(i))
-            threshold = calc_func(sm, new_set, num_samples)
+            threshold = calc_func(sm, new_set, num_samples) # criteruim (ep/sdp)
             if threshold >= worst_from_best_threshold
                 push!(best_results, (new_set, threshold))
                 if length(best_results) > num_best
@@ -41,7 +41,7 @@ function beam_search(sm::Subset_minimal, calc_func::Function, fix_inputs::SBitSe
 
     return best_results
 end
- 
+
 
 function generate_array_of_top_sets(sm::Subset_minimal, calc_func::Function, best_results::Array{Tuple{SBitSet{N,T}, Float32}}, num_best::Int, num_samples::Int) where{N, T}
     first_of_the_first = beam_search(sm, calc_func, best_results[end][1], num_best, num_samples)

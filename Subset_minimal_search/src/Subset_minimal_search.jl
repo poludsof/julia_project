@@ -1,4 +1,4 @@
-module Subset_minimal_search
+# module Subset_minimal_search
 
 using Flux
 using JuMP
@@ -14,9 +14,7 @@ using MLUtils: DataLoader
 using CairoMakie
 using Makie
 using Makie.Colors
-using BSON
 using Serialization
-
 
 # import CairoMakie
 # import Makie
@@ -36,8 +34,8 @@ include("backward_search.jl")
 include("forward_search.jl")
 include("milp.jl")
 include("random_sampling.jl")
+include("full_search.jl")
 
-# calculate_sdp(Subset_minimal(nn, img, label_img), best_set, num_samples)
 
 
-end
+# end
