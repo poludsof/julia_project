@@ -52,7 +52,7 @@ function beam_search(sm::Subset_minimal, calc_func::Function, fix_inputs::SBitSe
 end
 
 
-function part_beam_search_I2(sm::Subset_minimal, calc_func::Function, I3, I2::SBitSet{N, T}, num_best::Int, num_samples::Int, best_results=Array{Tuple{SBitSet{N, T}, Float32}, 1}()) where {N, T}
+function part_beam_search_I2(sm::Subset_minimal, calc_func::Function, I2::SBitSet{N, T}, num_best::Int, num_samples::Int, best_results=Array{Tuple{SBitSet{N, T}, Float32}, 1}()) where {N, T}
     worst_from_best_threshold = isempty(best_results) ? 0.0 : best_results[end][2]
 
     for i in 1:256
@@ -60,6 +60,28 @@ function part_beam_search_I2(sm::Subset_minimal, calc_func::Function, I3, I2::SB
             new_set_I = SBitSet{N, T}()
             new_set_I = union(I2, SBitSet{32, UInt32}(i))
             threshold = sdp_full(sm.nn[1:2], sm.nn[1](sm.input), new_set_I, num_samples) # criteruim (ep/sdp)
+            if threshold >= worst_from_best_threshold
+                push!(best_results, (new_set_I, threshold))
+                if length(best_results) > num_best
+                    sort!(best_results, by=x->x[2], rev=true)
+                    pop!(best_results)
+                    worst_from_best_threshold = best_results[end][2]
+                end
+            end
+        end
+    end
+
+    return best_results
+end
+
+function part_beam_search_I3(sm::Subset_minimal, calc_func::Function, I1::SBitSet{N, T}, num_best::Int, num_samples::Int, best_results=Array{Tuple{SBitSet{N, T}, Float32}, 1}()) where {N, T}
+    worst_from_best_threshold = isempty(best_results) ? 0.0 : best_results[end][2]
+
+    for i in 1:256
+        if !(i in I3)
+            new_set_I = SBitSet{N, T}()
+            new_set_I = union(I2, SBitSet{32, UInt32}(i))
+            threshold = sdp_full(sm.nn[2:3], sm.nn[1:2](sm.input), new_set_I, num_samples) # criteruim (ep/sdp)
             if threshold >= worst_from_best_threshold
                 push!(best_results, (new_set_I, threshold))
                 if length(best_results) > num_best
@@ -93,9 +115,11 @@ function full_beam_search(sm::Subset_minimal, calc_func::Function, threshold=0.9
     I1 = SBitSet{32, UInt32}()
 
     first_i_I3 = beam_search(sm, calc_func, I3, num_best, num_samples) # {1, 456, 752}
-    first_i_I2 = part_beam_search(sm, calc_func, first_i_I3, I2, num_best, num_samples) # {1, 456, 752}
+    first_i_I2 = part_beam_search_I2(sm, calc_func, I2, num_best, num_samples) # {1, 456, 752}
     # println(first_i_I2)
-    sdp_partial(sm.nn[1:2], sm.input, first_i_I3[1][1], first_i_I2[1][1], 10000)
+    # sdp_partial(sm.nn[1:2], sm.input, first_i_I3[1][1], first_i_I2[1][1], 10000)
+    first_i_I2 = part_beam_search(sm, calc_func, I1, num_best, num_samples) # {1, 456, 752}
+
 
     # tmp = generate_array_of_top_sets(sm, calc_func, first_i_I3, num_best, num_samples)
     # score_val = 0.0
