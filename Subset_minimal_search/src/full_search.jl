@@ -123,25 +123,20 @@ function full_beam_search(sm::Subset_minimal, calc_func::Function, threshold=0.9
 
     # heuristic_val = heuristic(sm.nn, sm.input, (I3[1][1], I2[1][1], I1[1][1]))
     # println("Heuristic value: ", heuristic_val)
-    I3 = beam_search(sm, calc_func, I3[1][1], num_best, num_samples)
-    I2 = part_beam_search_I2(sm, calc_func, I2[1][1], num_best, num_samples)
-    I1 = part_beam_search_I3(sm, calc_func, I1[1][1], num_best, num_samples)
 
-    println("I1:", I1)
+    full_error = heuristic(sm.nn, sm.input, (I3[1][1], I2[1][1], I1[1][1]))
+    println("First full error: ", full_error)
 
-    # full_error = 0.0
-
-    # i = 1
-    # while full_error > 5
-    #     I3 = beam_search(sm, calc_func, I3, num_best, num_samples)
-    #     I2 = part_beam_search_I2(sm, calc_func, I2, num_best, num_samples)
-    #     I1 = part_beam_search_I3(sm, calc_func, I1, num_best, num_samples)
-    #     heuristic_val = heuristic(sm.nn, sm.input, (I3[1][1], I2[1][1], I1[1][1]))
-
-    #     println("THE END of $i, best score: ", tmp[1][2])    
-    #     i += 1
-    #     score_val = tmp[1][2]  # get the best score
-    # end
+    i = 1
+    while full_error > 2
+        I3 = beam_search(sm, calc_func, I3[1][1], num_best, num_samples)
+        I2 = part_beam_search_I2(sm, calc_func, I2[1][1], num_best, num_samples)
+        I1 = part_beam_search_I3(sm, calc_func, I1[1][1], num_best, num_samples)
+        heuristic_val = heuristic(sm.nn, sm.input, (I3[1][1], I2[1][1], I1[1][1]))
+        full_error = heuristic_val
+        println("THE END of $i, full_error: ", full_error)    
+        i += 1
+    end
     # print_sets(tmp)
 
     # return tmp[1][1]  # return set with the best score
