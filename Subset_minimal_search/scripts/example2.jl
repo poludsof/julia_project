@@ -9,8 +9,8 @@ using Subset_minimal_search.Serialization
 
 using Subset_minimal_search: preprocess_bin_neg, onehot_labels, accuracy, Subset_minimal, full_beam_search
 
-# model = deserialize("/home/sofia/julia_project/Subset_minimal_search/models/binary_model.jls")
-model = deserialize("C:/Users/spolu/Desktop/julia_project/Subset_minimal_search/models/binary_model.jls")
+model = deserialize("/home/sofia/julia_project/Subset_minimal_search/models/binary_model.jls")
+# model = deserialize("C:/Users/spolu/Desktop/julia_project/Subset_minimal_search/models/binary_model.jls")
 println(model)
 
 
@@ -42,3 +42,9 @@ num_samples=70
 
 # calculate_sdp or calculate_ep
 best_set = full_beam_search(Subset_minimal(model, img, label_img), sdp_full, threshold, num_best, num_samples)
+
+tmpI3 = SBitSet{32, UInt32}(1)  # Example input for ii
+tmpI2 = SBitSet{32, UInt32}(60) # Example input for jj
+
+# Assuming model and img are defined:
+result = sdp_partial(model[2], model[1](img), tmpI3, tmpI2, num_samples)

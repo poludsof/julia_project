@@ -1,4 +1,4 @@
-# module Subset_minimal_search
+module Subset_minimal_search
 
 using Flux
 using JuMP
@@ -38,4 +38,4 @@ include("full_search.jl")
 
 
 
-# end
+end

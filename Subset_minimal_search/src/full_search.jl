@@ -20,11 +20,12 @@ function sdp_full(model, img, ii, num_samples)
 	mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
 end
 
-function sdp_partial(model, img, ii, jj, num_samples) # ii = I3 __ jj = I2
+function sdp_partial(model, img, ii, jj, num_samples) # ii = I2 --> jj = I1
     ii = collect(ii)
     jj = collect(jj)
 	x = rand([-1,1], length(img), num_samples)
 	x[ii,:] .= img[ii]
+    println("length:", model(x)[:, 1])
 	mean(model(x)[jj, :] .== model(img)[jj, :])
 end
 
@@ -59,7 +60,7 @@ function part_beam_search_I2(sm::Subset_minimal, calc_func::Function, I2::SBitSe
         if !(i in I2)
             new_set_I = SBitSet{N, T}()
             new_set_I = union(I2, SBitSet{32, UInt32}(i))
-            threshold = sdp_full(sm.nn[1:2], sm.nn[1](sm.input), new_set_I, num_samples) # criteruim (ep/sdp)
+            threshold = sdp_full(sm.nn[2:3], sm.nn[1](sm.input), new_set_I, num_samples) # criteruim (ep/sdp)
             if threshold >= worst_from_best_threshold
                 push!(best_results, (new_set_I, threshold))
                 if length(best_results) > num_best
@@ -78,10 +79,10 @@ function part_beam_search_I3(sm::Subset_minimal, calc_func::Function, I1::SBitSe
     worst_from_best_threshold = isempty(best_results) ? 0.0 : best_results[end][2]
 
     for i in 1:256
-        if !(i in I3)
+        if !(i in I1)
             new_set_I = SBitSet{N, T}()
-            new_set_I = union(I2, SBitSet{32, UInt32}(i))
-            threshold = sdp_full(sm.nn[2:3], sm.nn[1:2](sm.input), new_set_I, num_samples) # criteruim (ep/sdp)
+            new_set_I = union(I1, SBitSet{32, UInt32}(i))
+            threshold = sdp_full(sm.nn[3], sm.nn[1:2](sm.input), new_set_I, num_samples) # criteruim (ep/sdp)
             if threshold >= worst_from_best_threshold
                 push!(best_results, (new_set_I, threshold))
                 if length(best_results) > num_best
@@ -114,18 +115,23 @@ function full_beam_search(sm::Subset_minimal, calc_func::Function, threshold=0.9
     I2 = SBitSet{32, UInt32}()
     I1 = SBitSet{32, UInt32}()
 
-    first_i_I3 = beam_search(sm, calc_func, I3, num_best, num_samples) # {1, 456, 752}
-    first_i_I2 = part_beam_search_I2(sm, calc_func, I2, num_best, num_samples) # {1, 456, 752}
+    I3 = beam_search(sm, calc_func, I3, num_best, num_samples)
+    I2 = part_beam_search_I2(sm, calc_func, I2, num_best, num_samples)
     # println(first_i_I2)
     # sdp_partial(sm.nn[1:2], sm.input, first_i_I3[1][1], first_i_I2[1][1], 10000)
-    first_i_I2 = part_beam_search(sm, calc_func, I1, num_best, num_samples) # {1, 456, 752}
+    I1 = part_beam_search_I3(sm, calc_func, I1, num_best, num_samples)
 
+    # println("I3:", I3[1][1], " I2:", I2[1][1], " I1:", I1[1][1])
+    heuristic_val = heuristic(sm.nn, sm.input, (I3[1][1], I2[1][1], I1[1][1]))
+    println("Heuristic value: ", heuristic_val)
 
-    # tmp = generate_array_of_top_sets(sm, calc_func, first_i_I3, num_best, num_samples)
-    # score_val = 0.0
     # i = 1
-    # while score_val < threshold
-    #     tmp = generate_array_of_top_sets(sm, calc_func, tmp, num_best, num_samples)
+    # while heuristic_val < threshold
+    #     I3 = beam_search(sm, calc_func, I3, num_best, num_samples)
+    #     I2 = part_beam_search_I2(sm, calc_func, I2, num_best, num_samples)
+    #     I1 = part_beam_search_I3(sm, calc_func, I1, num_best, num_samples)
+    #     heuristic_val = heuristic(sm.nn, sm.input, (I3[1][1], I2[1][1], I1[1][1]))
+
     #     println("THE END of $i, best score: ", tmp[1][2])    
     #     i += 1
     #     score_val = tmp[1][2]  # get the best score
@@ -133,6 +139,27 @@ function full_beam_search(sm::Subset_minimal, calc_func::Function, threshold=0.9
     # print_sets(tmp)
 
     # return tmp[1][1]  # return set with the best score
+end
+
+
+function heuristic(model, xp, (I3, I2, I1))
+    println("ALLO")
+	# independent criteria
+    sdp_full(model, xp, I3, 1000) +
+    sdp_full(model[2:3], model[1](xp), I2, 1000) +
+    sdp_full(model[3], model[1:2](xp), I1, 100) +
+    sdp_partial(model[1], xp, I3, I2, 100) +
+    sdp_partial(model[1:2], xp, I3, I1, 100) +
+    sdp_partial(model[2], model[1](xp), I2, I1, 100)
+
+
+	# max(0, 0.95 - sdp_full(model, xp, I3, 1000)) +
+	# max(0, 0.95 - sdp_full(model[2:3], model[1](xp), I2, 100)) +
+	# max(0, 0.95 - sdp_full(model[3], model[1:2](xp), I1, 100)) +
+	# # independent criteria
+	# max(0, 0.95 - sdp_partial(model[1], xp, I3, I2, 100)) +
+	# max(0, 0.95 - sdp_partial(model[1:2], xp, I3, I1, 100)) +
+	# max(0, 0.95 - sdp_partial(model[2:3], model[1](xp), I2, I1, 100))
 end
 
 
