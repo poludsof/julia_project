@@ -19,7 +19,18 @@ using Subset_minimal_search: compute_sdp, forward_search
 xₛ = train_X_bin_neg[:, 1]
 yₛ = argmax(test_y[:, 1]) - 1
 
-xₛ = collect(1:10)
-solutions, reason = forward_search(xₛ, yₛ, max_steps=10, sdp_threshold=0.90)
+# xₛ = collect(1:10)
+solutions, reason = forward_search(model, xₛ, yₛ, max_steps=30, sdp_threshold=0.5)
 println("Solutions: ", solutions)
 println("Reason: ", reason)
+
+best_solution = []
+best_sdp_value = -Inf
+for solution in solutions
+    sdp_value = compute_sdp(model, img, solution)  # Recompute SDP for each solution
+    if sdp_value > best_sdp_value
+        best_sdp_value = sdp_value
+        best_solution = solution
+    end
+end
+println("Best solution: ", best_solution, " with SDP value: ", best_sdp_value)

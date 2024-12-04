@@ -3,14 +3,17 @@ function forward_search_dfs(sm::Subset_minimal, given_input_set::SBitSet{N,T}) w
 
 end
 
-function compute_sdp()
-    return rand()
+function compute_sdp(model, img, ii)
+    # ii = collect(ii)
+    x = rand([-1,1], length(img), 1000)
+    x[ii,:] .= img[ii]
+    mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
 end
 
-function expand!(open_list::PriorityQueue{Vector{Int}, Float64}, close_list::Set{Vector{Int}}, subset::Vector{Int}, xₛ, yₛ)
+function expand!(open_list::PriorityQueue{Vector{Int}, Float64}, close_list::Set{Vector{Int}}, subset::Vector{Int}, model, xₛ, yₛ)
 
     remaining_features = setdiff(1:size(xₛ, 1), subset)
-    println("Remaining features: ", length(remaining_features))
+    # println("Remaining features: ", length(remaining_features))
 
     for feature in remaining_features
         new_subset = vcat(subset, feature)
@@ -19,8 +22,8 @@ function expand!(open_list::PriorityQueue{Vector{Int}, Float64}, close_list::Set
             continue
         end
 
-        sdp_value = compute_sdp()
-        println("sdp_value: ", sdp_value, " for subset: ", new_subset)
+        sdp_value = compute_sdp(model, xₛ, new_subset)
+        # println("sdp_value: ", sdp_value, " for subset: ", new_subset)
 
 
         if !haskey(open_list, new_subset) #  checks whether the new_subset is already present in the open_list
@@ -29,11 +32,11 @@ function expand!(open_list::PriorityQueue{Vector{Int}, Float64}, close_list::Set
     end
 end
 
-function forward_search(xₛ, yₛ; max_steps::Int=10000, sdp_threshold::Float64=0.90)
+function forward_search(model, xₛ, yₛ; max_steps::Int=10000, sdp_threshold::Float64=0.90)
     open_list = PriorityQueue{Vector{Int}, Float64}()
     close_list = Set{Vector{Int}}()
     solutions = Set{Vector{Int}}()  
-    expand!(open_list, close_list, Int[], xₛ, yₛ)
+    expand!(open_list, close_list, Int[], model, xₛ, yₛ)
 
     steps = 0
     while !isempty(open_list)
@@ -42,20 +45,20 @@ function forward_search(xₛ, yₛ; max_steps::Int=10000, sdp_threshold::Float64
             break
         end
 
-        current_subset = dequeue!(open_list)
         current_subset, priority = peek(open_list)
         sdp_value = -priority
+        current_subset = dequeue!(open_list)
         
         println("current_subset:", current_subset)
-        # println("sdp_value:", sdp_value)
+        println("sdp_value:", sdp_value)
 
 
         if sdp_value ≥ sdp_threshold
             println("Solution found: ", current_subset, " sdp_value: ", sdp_value)
             push!(solutions, current_subset)
         else
-            println("Expanding current_subset: ", current_subset)
-            expand!(open_list, close_list, current_subset, xₛ, yₛ)
+            # println("Expanding current_subset: ", current_subset)
+            expand!(open_list, close_list, current_subset, model, xₛ, yₛ)
         end
 
         push!(close_list, current_subset)
