@@ -1,11 +1,16 @@
 
-model = deserialize("/home/sofia/julia_project/Subset_minimal_search/models/binary_model.jls")
+model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
+model = deserialize(model_path)
+# model = deserialize("/home/sofia/julia_project/Subset_minimal_search/models/binary_model.jls")
 
 train_X, train_y = MNIST(split=:train)[:]
 test_X, test_y = MNIST(split=:test)[:]
 
-train_X_bin_neg = preprocess_bin_neg(preprocess_binary(train_X))
-test_X_bin_neg = preprocess_bin_neg(preprocess_binary(test_X))
+train_X_binary = preprocess_binary(train_X)
+test_X_binary = preprocess_binary(test_X)
+
+train_X_bin_neg = preprocess_bin_neg(train_X_binary)
+test_X_bin_neg = preprocess_bin_neg(test_X_binary)
 
 train_y = onehot_labels(train_y)
 test_y = onehot_labels(test_y)
@@ -27,10 +32,15 @@ println("Reason: ", reason)
 best_solution = []
 best_sdp_value = -Inf
 for solution in solutions
-    sdp_value = compute_sdp(model, img, solution)  # Recompute SDP for each solution
+    sdp_value = compute_sdp_fwd(model, img, solution)  # Recompute SDP for each solution
     if sdp_value > best_sdp_value
         best_sdp_value = sdp_value
         best_solution = solution
     end
 end
 println("Best solution: ", best_solution, " with SDP value: ", best_sdp_value)
+
+# ii_set = best_solution
+# plot_set = Set([i for i in ii_set])
+# img = train_X_binary[:, 1]
+# plot_mnist_with_active_pixels(img, Set(plot_set))
