@@ -7,7 +7,7 @@ using Subset_minimal_search.Makie
 using Subset_minimal_search.CairoMakie
 using Subset_minimal_search.Serialization
 
-using Subset_minimal_search: preprocess_bin_neg, onehot_labels, accuracy, Subset_minimal, full_beam_search
+using Subset_minimal_search: preprocess_binary, preprocess_bin_neg, onehot_labels, accuracy, Subset_minimal, full_beam_search
 
 model = deserialize("/home/sofia/julia_project/Subset_minimal_search/models/binary_model.jls")
 # model = deserialize("C:/Users/spolu/Desktop/julia_project/Subset_minimal_search/models/binary_model.jls")
@@ -18,10 +18,8 @@ println(model)
 train_X, train_y = MNIST(split=:train)[:]
 test_X, test_y = MNIST(split=:test)[:]
 
-train_X_binary = preprocess_binary(train_X)
-test_X_binary = preprocess_binary(test_X)
-train_X_bin_neg = preprocess_bin_neg(train_X_binary)
-test_X_bin_neg = preprocess_bin_neg(test_X_binary)
+train_X_bin_neg = preprocess_bin_neg(preprocess_binary(train_X))
+test_X_bin_neg = preprocess_bin_neg(preprocess_binary(test_X))
 
 println("Digit: ", argmax(train_y[:, 1]) - 1, "\nOtput of the model: ", model(train_X_bin_neg[:, 1]), "\nModel's digit: ", argmax(model(train_X_bin_neg[:, 1])) - 1)
 
@@ -37,7 +35,7 @@ img = train_X_bin_neg[:, 1]
 label_img = argmax(test_y[:, 1]) - 1
 threshold=0.1
 num_best=1
-num_samples=70
+num_samples=100
 
 # calculate_sdp or calculate_ep
-best_set = full_beam_search(Subset_minimal(model, img, label_img), sdp_full, threshold, num_best, num_samples)
+best_set = full_beam_search(Subset_minimal(model, img, label_img), threshold, num_best, num_samples)
