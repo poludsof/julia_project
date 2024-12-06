@@ -16,7 +16,7 @@ using Subset_minimal_search: preprocess_binary, preprocess_bin_neg, onehot_label
 
 model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
 model = deserialize(model_path)
-println(model)
+# println(model)
 
 
 # Prepare data and model
@@ -26,21 +26,25 @@ test_X, test_y = MNIST(split=:test)[:]
 train_X_bin_neg = preprocess_bin_neg(preprocess_binary(train_X))
 test_X_bin_neg = preprocess_bin_neg(preprocess_binary(test_X))
 
-println("Digit: ", argmax(train_y[:, 1]) - 1, "\nOtput of the model: ", model(train_X_bin_neg[:, 1]), "\nModel's digit: ", argmax(model(train_X_bin_neg[:, 1])) - 1)
+# println("Digit: ", argmax(train_y[:, 1]) - 1, "\nOtput of the model: ", model(train_X_bin_neg[:, 1]), "\nModel's digit: ", argmax(model(train_X_bin_neg[:, 1])) - 1)
 
 train_y = onehot_labels(train_y)
 test_y = onehot_labels(test_y)
  
 # test accuracy of the model
-println("Train Accuracy: ", accuracy(model, train_X_bin_neg, train_y) * 100, "%")
-println("Test Accuracy: ", accuracy(model, test_X_bin_neg, test_y) * 100, "%")
+# println("Train Accuracy: ", accuracy(model, train_X_bin_neg, train_y) * 100, "%")
+# println("Test Accuracy: ", accuracy(model, test_X_bin_neg, test_y) * 100, "%")
 
 # Test random sampling
 img = train_X_bin_neg[:, 1]
 label_img = argmax(test_y[:, 1]) - 1
-threshold=0.1
+threshold=1
 num_best=1
 num_samples=100
 
 # calculate_sdp or calculate_ep
 best_set = full_beam_search(Subset_minimal(model, img, label_img), threshold, num_best, num_samples)
+
+println("Subset I3: ", best_set[1])
+println("Subset I2: ", best_set[2])
+println("Subset I1: ", best_set[3])

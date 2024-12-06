@@ -64,7 +64,7 @@ end
 # end
 
 
-function full_beam_search(sm::Subset_minimal, threshold=0.9, num_best=1, num_samples=100)
+function full_beam_search(sm::Subset_minimal, threshold_total_err=0.9, num_best=1, num_samples=100)
     I3 = beam_search(sm.nn, sm.input, SBitSet{32, UInt32}(), num_best, num_samples)
     I2 = beam_search(sm.nn[2:3], sm.nn[1](sm.input), SBitSet{32, UInt32}(), num_best, num_samples)
     I1 = beam_search(sm.nn[3], sm.nn[1:2](sm.input), SBitSet{32, UInt32}(), num_best, num_samples)
@@ -72,10 +72,16 @@ function full_beam_search(sm::Subset_minimal, threshold=0.9, num_best=1, num_sam
     full_error = heuristic(sm.nn, sm.input, (I3[1][1], I2[1][1], I1[1][1]))
 
     length = 1
-    while full_error > 2
+    while full_error > threshold_total_err
         I3 = beam_search(sm.nn, sm.input, I3[1][1], num_best, num_samples)
-        I2 = beam_search(sm.nn[2:3], sm.nn[1](sm.input), I2[1][1], num_best, num_samples)
-        I1 = beam_search(sm.nn[3], sm.nn[1:2](sm.input), I1[1][1], num_best, num_samples)
+        
+        if length < 256
+            I2 = beam_search(sm.nn[2:3], sm.nn[1](sm.input), I2[1][1], num_best, num_samples)
+            I1 = beam_search(sm.nn[3], sm.nn[1:2](sm.input), I1[1][1], num_best, num_samples)
+        else
+            println("length is greater than 256")
+        end
+
 
         full_error = heuristic(sm.nn, sm.input, (I3[1][1], I2[1][1], I1[1][1]))
         println("Length of ii: $length, full_error: ", full_error)    
@@ -88,7 +94,7 @@ end
 function heuristic(model, xp, (I3, I2, I1))
     num_samples = 1000
     # println("num_samples: ", num_samples)
-	max(0, 0.9- sdp_full(model, xp, I3, num_samples)) +
+	max(0, 0.9 - sdp_full(model, xp, I3, num_samples)) +
 	max(0, 0.9 - sdp_full(model[2:3], model[1](xp), I2, num_samples)) +
 	max(0, 0.9 - sdp_full(model[3], model[1:2](xp), I1, num_samples)) +
 	max(0, 0.9 - sdp_partial(model[1], xp, I3, I2, num_samples)) +
