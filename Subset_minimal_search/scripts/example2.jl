@@ -1,3 +1,8 @@
+
+"""
+Beam search with b=1 with partial and full probability criterion
+"""
+
 using Subset_minimal_search
 
 using Subset_minimal_search.Flux
@@ -9,8 +14,8 @@ using Subset_minimal_search.Serialization
 
 using Subset_minimal_search: preprocess_binary, preprocess_bin_neg, onehot_labels, accuracy, Subset_minimal, full_beam_search
 
-model = deserialize("/home/sofia/julia_project/Subset_minimal_search/models/binary_model.jls")
-# model = deserialize("C:/Users/spolu/Desktop/julia_project/Subset_minimal_search/models/binary_model.jls")
+model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
+model = deserialize(model_path)
 println(model)
 
 

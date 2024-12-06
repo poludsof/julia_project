@@ -1,3 +1,9 @@
+
+"""
+Beam search to find minimal subsets 
+on the first(input) layer sufficient for classification.
+"""
+
 using Subset_minimal_search
 
 using Subset_minimal_search.Flux

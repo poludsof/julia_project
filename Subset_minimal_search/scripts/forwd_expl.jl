@@ -25,20 +25,12 @@ xₛ = train_X_bin_neg[:, 1]
 yₛ = argmax(test_y[:, 1]) - 1
 
 # xₛ = collect(1:10)
-solutions, reason = forward_search(model, xₛ, yₛ, max_steps=30, sdp_threshold=0.5)
+solutions, reason = forward_search(model, xₛ, yₛ, max_steps=30, sdp_threshold=0.5, num_samples=1000)
 println("Solutions: ", solutions)
 println("Reason: ", reason)
 
-best_solution = []
-best_sdp_value = -Inf
-for solution in solutions
-    sdp_value = compute_sdp_fwd(model, img, solution)  # Recompute SDP for each solution
-    if sdp_value > best_sdp_value
-        best_sdp_value = sdp_value
-        best_solution = solution
-    end
-end
-println("Best solution: ", best_solution, " with SDP value: ", best_sdp_value)
+best_solution, best_sdp_value = choose_best_solution(solutions, model, xₛ, 1000)
+println("Best solution: ", best_solution, " \nwith SDP value: ", best_sdp_value)
 
 # ii_set = best_solution
 # plot_set = Set([i for i in ii_set])

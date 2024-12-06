@@ -36,6 +36,7 @@ include("forward_search.jl")
 include("milp.jl")
 include("random_sampling.jl")
 include("full_search.jl")
+include("full_fwd_search.jl")
 
 
 
