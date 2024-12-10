@@ -38,12 +38,12 @@ test_y = onehot_labels(test_y)
 # Test random sampling
 img = train_X_bin_neg[:, 1]
 label_img = argmax(test_y[:, 1]) - 1
-threshold=1
+threshold=0.1
 num_best=1
 num_samples=100
 
 # calculate_sdp or calculate_ep
-best_set = full_beam_search(Subset_minimal(model, img, label_img), threshold, num_best, num_samples)
+best_set = full_beam_search2(Subset_minimal(model, img, label_img), threshold, num_samples)
 
 println("Subset I3: ", best_set[1])
 println("Subset I2: ", best_set[2])
