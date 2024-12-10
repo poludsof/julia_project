@@ -102,22 +102,66 @@ function full_beam_search2(sm::Subset_minimal, threshold_total_err=0.1, num_samp
 end
 
 
-function add_best(sm::Subset_minimal, (I3,I2,I1), num_samples = 100)
+function add_best(sm::Subset_minimal, (I3, I2, I1), num_samples = 100)
     # searching through I3
     ii₁ = map(setdiff(1:784, I3)) do i
         Iᵢ = push(I3, i)
-        (;ii = (Iᵢ, I2, I1), h = heuristic(sm.nn, sm.input, (Iᵢ, I2, I1)))
+        (;ii = (Iᵢ, I2, I1), h = heuristic(sm.nn, sm.input, (Iᵢ, I2, I1)), num_samples)
     end
     ii₂ = map(setdiff(1:256, I2)) do i
         Iᵢ = push(I2, i)
-        (;ii = (I3, Iᵢ, I1), h = heuristic(sm.nn, sm.input, (I3, Iᵢ, I1)))
+        (;ii = (I3, Iᵢ, I1), h = heuristic(sm.nn, sm.input, (I3, Iᵢ, I1)), num_samples)
     end
 
     ii₃ = map(setdiff(1:256, I1)) do i
         Iᵢ = push(I1, i)
-        (;ii = (I3,I2, Iᵢ), h = heuristic(sm.nn, sm.input, (I3, I2, Iᵢ)))
+        (;ii = (I3,I2, Iᵢ), h = heuristic(sm.nn, sm.input, (I3, I2, Iᵢ)), num_samples)
     end
     sort(vcat(ii₃, ii₂, ii₁), lt = (i,j) -> i.h < j.h)
+end
+
+
+function backward_search(sm::Subset_minimal, (I3, I2, I1), num_samples=100)
+    ii₁ = map(collect(I3)) do i
+        Iᵢ = pop(I3, i)
+        (;ii = (Iᵢ, I2, I1), h = heuristic(sm.nn, sm.input, (Iᵢ, I2, I1), num_samples))
+    end
+    
+    ii₂ = map(collect(I2)) do i
+        Iᵢ = pop(I2, i)
+        (;ii = (I3, Iᵢ, I1), h = heuristic(sm.nn, sm.input, (I3, Iᵢ, I1), num_samples))
+    end
+    
+    ii₃ = map(collect(I1)) do i
+        Iᵢ = pop(I1, i)
+        (;ii = (I3, I2, Iᵢ), h = heuristic(sm.nn, sm.input, (I3, I2, Iᵢ), num_samples))
+    end
+    
+    sort(vcat(ii₁, ii₂, ii₃), lt = (i, j) -> i.h < j.h)
+end
+
+function full_backward_search(sm::Subset_minimal, (I3, I2, I1), threshold_total_err=0.1, num_samples=100)
+    full_error = max_error(sm.nn, sm.input, (I3, I2, I1), num_samples)
+    println("Initial max error: ", full_error)
+
+    while true
+        candidates = backward_search(sm, (I3, I2, I1), num_samples)
+        best_candidate = candidates[1]
+        
+        I3_tmp, I2_tmp, I1_tmp = best_candidate.ii
+        new_error = max_error(sm.nn, sm.input, (I3_tmp, I2_tmp, I1_tmp), num_samples)
+        
+        println("Length of ii: $((length(I3), length(I2), length(I1))), new_error: ", new_error, " heuristic: ", best_candidate.h)
+        
+        if new_error > full_error
+            break
+        end
+        
+        I3, I2, I1 = I3_tmp, I2_tmp, I1_tmp
+        full_error = new_error
+    end
+    
+    return I3, I2, I1
 end
 
 
