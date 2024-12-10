@@ -156,12 +156,19 @@ function backward_dfs_search(sm::Subset_minimal, subsets, threshold_total_err=0.
     end
 
     stack = [(I3, I2, I1)]
+    closed_list = Set{Tuple{SBitSet, SBitSet, SBitSet}}()
     best_subsets = (I3, I2, I1)
 
     while !isempty(stack)
         current_subsets = pop!(stack)
+
+        if current_subsets in closed_list
+            continue
+        end
+        push!(closed_list, current_subsets)
+
         current_error = max_error(sm.nn, sm.input, current_subsets, num_samples)
-        println("Current subsets", current_subsets, " Current error: ", current_error)
+        # println("Current subsets", current_subsets, " Current error: ", current_error)
 
         if current_error <= threshold_total_err
             best_subsets = current_subsets
@@ -169,15 +176,24 @@ function backward_dfs_search(sm::Subset_minimal, subsets, threshold_total_err=0.
         else
             I3, I2, I1 = deepcopy(current_subsets)
             for i in collect(I3)
-                stack = push!(stack, (pop(I3, i), I2, I1))
+                new_subsets = (pop(I3, i), I2, I1)
+                if new_subsets ∉ closed_list
+                    stack = push!(stack, new_subsets)
+                end
             end
 
             for i in collect(I2)
-                stack = push!(stack, (I3, pop(I2, i), I1))
+                new_subsets = (I3, pop(I2, i), I1)
+                if new_subsets ∉ closed_list
+                    stack = push!(stack, new_subsets)
+                end
             end
 
             for i in collect(I1)
-                stack = push!(stack, (I3, I2, pop(I1, i)))
+                new_subsets = (I3, I2, pop(I1, i))
+                if new_subsets ∉ closed_list
+                    stack = push!(stack, new_subsets)
+                end
             end
         end
     end
