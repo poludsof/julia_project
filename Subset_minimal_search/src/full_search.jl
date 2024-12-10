@@ -121,50 +121,6 @@ function add_best(sm::Subset_minimal, (I3, I2, I1), num_samples = 100)
 end
 
 
-function backward_search(sm::Subset_minimal, (I3, I2, I1), num_samples=100)
-    ii₁ = map(collect(I3)) do i
-        Iᵢ = pop(I3, i)
-        (;ii = (Iᵢ, I2, I1), h = heuristic(sm.nn, sm.input, (Iᵢ, I2, I1), num_samples))
-    end
-    
-    ii₂ = map(collect(I2)) do i
-        Iᵢ = pop(I2, i)
-        (;ii = (I3, Iᵢ, I1), h = heuristic(sm.nn, sm.input, (I3, Iᵢ, I1), num_samples))
-    end
-    
-    ii₃ = map(collect(I1)) do i
-        Iᵢ = pop(I1, i)
-        (;ii = (I3, I2, Iᵢ), h = heuristic(sm.nn, sm.input, (I3, I2, Iᵢ), num_samples))
-    end
-    
-    sort(vcat(ii₁, ii₂, ii₃), lt = (i, j) -> i.h < j.h)
-end
-
-function full_backward_search(sm::Subset_minimal, (I3, I2, I1), threshold_total_err=0.1, num_samples=100)
-    full_error = max_error(sm.nn, sm.input, (I3, I2, I1), num_samples)
-    println("Initial max error: ", full_error)
-
-    while true
-        candidates = backward_search(sm, (I3, I2, I1), num_samples)
-        best_candidate = candidates[1]
-        
-        I3_tmp, I2_tmp, I1_tmp = best_candidate.ii
-        new_error = max_error(sm.nn, sm.input, (I3_tmp, I2_tmp, I1_tmp), num_samples)
-        
-        println("Length of ii: $((length(I3), length(I2), length(I1))), new_error: ", new_error, " heuristic: ", best_candidate.h)
-        
-        if new_error > full_error
-            break
-        end
-        
-        I3, I2, I1 = I3_tmp, I2_tmp, I1_tmp
-        full_error = new_error
-    end
-    
-    return I3, I2, I1
-end
-
-
 function heuristic(model, xp, (I3, I2, I1), num_samples = 1000)
 	max(0, 0.9 - sdp_full(model, xp, I3, num_samples)) +
 	max(0, 0.9 - sdp_full(model[2:3], model[1](xp), I2, num_samples)) +
@@ -183,4 +139,48 @@ function max_error(model, xp, (I3, I2, I1), num_samples = 1000)
         max(0, 1.0 - sdp_partial(model[1:2], xp, I3, I1, num_samples)),
         max(0, 1.0 - sdp_partial(model[2], model[1](xp), I2, I1, num_samples))
     )
+end
+
+
+function backward_dfs_search(sm::Subset_minimal, subsets, threshold_total_err=0.01, num_samples=100)
+
+    # Compute initial full error
+    I3, I2, I1 = subsets
+    full_error = max_error(sm.nn, sm.input, (I3, I2, I1), num_samples)
+    println("Initial full error: ", full_error)
+
+
+    if full_error <= threshold_total_err
+        println("Initial full error already below threshold.")
+        return I3, I2, I1
+    end
+
+    stack = [(I3, I2, I1)]
+    best_subsets = (I3, I2, I1)
+
+    while !isempty(stack)
+        current_subsets = pop!(stack)
+        current_error = max_error(sm.nn, sm.input, current_subsets, num_samples)
+        println("Current subsets", current_subsets, " Current error: ", current_error)
+
+        if current_error <= threshold_total_err
+            best_subsets = current_subsets
+            println("Valid subset found: $((length(current_subsets[1]), length(current_subsets[2]), length(current_subsets[3]))) with error: ", current_error)
+        else
+            I3, I2, I1 = deepcopy(current_subsets)
+            for i in collect(I3)
+                stack = push!(stack, (pop(I3, i), I2, I1))
+            end
+
+            for i in collect(I2)
+                stack = push!(stack, (I3, pop(I2, i), I1))
+            end
+
+            for i in collect(I1)
+                stack = push!(stack, (I3, I2, pop(I1, i)))
+            end
+        end
+    end
+
+    return best_subsets
 end

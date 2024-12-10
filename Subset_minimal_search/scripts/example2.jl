@@ -41,18 +41,35 @@ test_y = onehot_labels(test_y)
 # Test random sampling
 img = train_X_bin_neg[:, 1]
 label_img = argmax(test_y[:, 1]) - 1
-threshold=0.2
+threshold=0.7
 num_best=1
 num_samples=100
 
 # calculate_sdp or calculate_ep
 best_set = full_beam_search2(Subset_minimal(model, img, label_img), threshold, num_samples)
-reduced_set = full_backward_search(Subset_minimal(model, img, label_img), best_set)
+reduced_sets = backward_dfs_search(Subset_minimal(model, img, label_img), best_set)
 
-println("Subset I3: ", best_set[1])
-println("Subset I2: ", best_set[2])
-println("Subset I1: ", best_set[3])
+I3_set, I2_set, I1_set = best_set
+println("Subset I3: ", I3_set)
+println("Subset I2: ", I2_set)
+println("Subset I1: ", I1_set)
 
+
+for i in collect(I3_test)
+    println("Subset: ", i)
+end
+
+I3_set_tmp = deepcopy(I3_set)
+I3_tmp, I2_tmp, I1_tmp = deepcopy(best_set)
+popped = pop(I3_tmp, 4)
+println("Subset I3: ", popped)
+
+
+#test backward
+I3_test = SBitSet{32, UInt32}(collect(1:2))
+I2_test = SBitSet{32, UInt32}(collect(3:4))
+I1_test = SBitSet{32, UInt32}(collect(5:6))
+red_test_sets = backward_dfs_search(Subset_minimal(model, img, label_img), (I3_test, I2_test, I1_test), 0.7, 100)
 
 # img_bin = train_X_binary[:, 1]
 # plot_set = Set([i for i in best_set[1]])
