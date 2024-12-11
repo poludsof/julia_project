@@ -142,61 +142,115 @@ function max_error(model, xp, (I3, I2, I1), num_samples = 1000)
 end
 
 
-function backward_dfs_search(sm::Subset_minimal, subsets, threshold_total_err=0.01, num_samples=100)
-
-    # Compute initial full error
+function backward_dfs_search(sm::Subset_minimal, subsets, _total_err=0.01, num_samples=100)
     I3, I2, I1 = subsets
-    full_error = max_error(sm.nn, sm.input, (I3, I2, I1), num_samples)
-    println("Initial full error: ", full_error)
+    initial_total_err = max_error(sm.nn, sm.input, (I3, I2, I1), num_samples)
+    println("Initial max error: ", initial_total_err)
 
-
-    if full_error <= threshold_total_err
-        println("Initial full error already below threshold.")
-        return I3, I2, I1
-    end
-
-    stack = [(I3, I2, I1)]
+    stack = [(heuristic(sm.nn, sm.input, (I3, I2, I1), num_samples), (I3, I2, I1))]  # Stack with heuristic value first
     closed_list = Set{Tuple{SBitSet, SBitSet, SBitSet}}()
     best_subsets = (I3, I2, I1)
 
+    # KAPACITA STAKU
     while !isempty(stack)
-        current_subsets = pop!(stack)
-
+        sort!(stack, by = x -> -x[1])
+        current_heuristic, current_subsets = pop!(stack)
+        
         if current_subsets in closed_list
             continue
         end
+
         push!(closed_list, current_subsets)
 
         current_error = max_error(sm.nn, sm.input, current_subsets, num_samples)
-        # println("Current subsets", current_subsets, " Current error: ", current_error)
+        println("length: $((length(current_subsets[1]), length(current_subsets[2]), length(current_subsets[3]))) Current error: ", current_error, " Current heuristic: ", current_heuristic)
 
-        if current_error <= threshold_total_err
+        if current_error <= _total_err
             best_subsets = current_subsets
             println("Valid subset found: $((length(current_subsets[1]), length(current_subsets[2]), length(current_subsets[3]))) with error: ", current_error)
         else
             I3, I2, I1 = deepcopy(current_subsets)
+            
+            # Expand I3
             for i in collect(I3)
                 new_subsets = (pop(I3, i), I2, I1)
-                if new_subsets ∉ closed_list
-                    stack = push!(stack, new_subsets)
+                new_heuristic = heuristic(sm.nn, sm.input, new_subsets, num_samples)
+                if new_heuristic < current_heuristic && new_subsets ∉ closed_list
+                    push!(stack, (new_heuristic, new_subsets))  # Push with heuristic value
                 end
             end
 
+            # Expand I2
             for i in collect(I2)
                 new_subsets = (I3, pop(I2, i), I1)
-                if new_subsets ∉ closed_list
-                    stack = push!(stack, new_subsets)
+                new_heuristic = heuristic(sm.nn, sm.input, new_subsets, num_samples)
+                if new_heuristic < current_heuristic && new_subsets ∉ closed_list
+                    push!(stack, (new_heuristic, new_subsets))  # Push with heuristic value
                 end
             end
 
+            # Expand I1
             for i in collect(I1)
                 new_subsets = (I3, I2, pop(I1, i))
-                if new_subsets ∉ closed_list
-                    stack = push!(stack, new_subsets)
+                new_heuristic = heuristic(sm.nn, sm.input, new_subsets, num_samples)
+                if new_heuristic < current_heuristic && new_subsets ∉ closed_list
+                    push!(stack, (new_heuristic, new_subsets))  # Push with heuristic value
                 end
             end
         end
+       
+    end
+    
+    return best_subsets
+end
+
+
+
+function full_beam_search_with_stack(sm::Subset_minimal, threshold_total_err=0.1, num_samples=100)
+    I3, I2, I1 = init_sbitset(784), init_sbitset(256), init_sbitset(256)
+    
+    full_error = max_error(sm.nn, sm.input, (I3, I2, I1), num_samples)
+    initial_heuristic = heuristic(sm.nn, sm.input, (I3, I2, I1), num_samples)
+    println("Initial error: ", full_error, " Initial heuristic: ", initial_heuristic)
+
+    stack = [(initial_heuristic, full_error, (I3, I2, I1))]
+
+    while !isempty(stack)
+        sort!(stack, by = x -> -x[1]) 
+        current_heuristic, current_error, (current_I3, current_I2, current_I1) = pop!(stack)
+        
+        if current_error <= threshold_total_err
+            println("Valid subset found: $((length(current_I3), length(current_I2), length(current_I1))) with error: ", current_error)
+            return current_I3, current_I2, current_I1
+        end
+
+        println("length $((length(current_I3), length(current_I2), length(current_I1))) Expanding state with error: $current_error, heuristic: $current_heuristic")
+
+        for i in setdiff(1:784, current_I3)
+            I3_new = deepcopy(current_I3)
+            I3_new = push(I3_new, i)
+            new_heuristic = heuristic(sm.nn, sm.input, (I3_new, current_I2, current_I1), num_samples)
+            new_error = max_error(sm.nn, sm.input, (I3_new, current_I2, current_I1), num_samples)
+            push!(stack, (new_heuristic, new_error, (I3_new, current_I2, current_I1)))
+        end
+
+        for i in setdiff(1:256, current_I2)
+            I2_new = deepcopy(current_I2)
+            I2_new = push(I2_new, i)
+            new_heuristic = heuristic(sm.nn, sm.input, (current_I3, I2_new, current_I1), num_samples)
+            new_error = max_error(sm.nn, sm.input, (current_I3, I2_new, current_I1), num_samples)
+            push!(stack, (new_heuristic, new_error, (current_I3, I2_new, current_I1)))
+        end
+
+        for i in setdiff(1:256, current_I1)
+            I1_new = deepcopy(current_I1)
+            I1_new = push(I1_new, i)
+            new_heuristic = heuristic(sm.nn, sm.input, (current_I3, current_I2, I1_new), num_samples)
+            new_error = max_error(sm.nn, sm.input, (current_I3, current_I2, I1_new), num_samples)
+            push!(stack, (new_heuristic, new_error, (current_I3, current_I2, I1_new)))
+        end
     end
 
-    return best_subsets
+    println("No valid subsets found within the given threshold.")
+    return I3, I2, I1
 end
