@@ -1,39 +1,49 @@
+@inline function sample_input(img::AbstractVector, ii::SBitSet, num_samples::Integer)
+    ii = collect(ii)
+    x = similar(img, length(img), num_samples)
+    @inbounds for col in axes(x, 2)
+        for i in axes(x, 1)
+            x[i, col] = 2*rand(Bool) - 1
+        end
+        for i in ii
+            x[i, col] = img[i]
+        end
+    end
+    x
+end
 
 function sdp_full(model, img, ii, num_samples)
-    ii = collect(ii)
-    x = rand([-1,1], length(img), num_samples)
-	x[ii,:] .= img[ii]
-	mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
+    # x = generate_random_img_with_fix_inputs(model, input, fix_inputs, num_samples)
+    x = sample_input(img, ii, num_samples)
+    mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
 end
 
 function sdp_partial(model, img, ii, jj, num_samples) # ii = I2 --> jj = I1
     isempty(jj) && return(1.0)
     isempty(ii) && return(0.0)
-    ii = collect(ii)
     jj = collect(jj)
-	x = rand([-1,1], length(img), num_samples)
-	x[ii,:] .= img[ii]
-	mean(model(x)[jj, :] .== model(img)[jj, :])
+    x = sample_input(img, ii, num_samples)
+    mean(model(x)[jj, :] .== model(img)[jj, :])
 end
 
 
 function heuristic(model, xp, (I3, I2, I1), num_samples = 1000)
-	max(0, 0.95 - sdp_full(model, xp, I3, num_samples)) +
-	max(0, 0.95 - sdp_full(model[2:3], model[1](xp), I2, num_samples)) +
-	max(0, 0.95 - sdp_full(model[3], model[1:2](xp), I1, num_samples)) +
-	max(0, 0.95 - sdp_partial(model[1], xp, I3, I2, num_samples)) +
-	max(0, 0.95 - sdp_partial(model[1:2], xp, I3, I1, num_samples)) +
-	max(0, 0.95 - sdp_partial(model[2], model[1](xp), I2, I1, num_samples))
+	max(0, 0.9 - sdp_full(model, xp, I3, num_samples)) +
+	max(0, 0.9 - sdp_full(model[2:3], model[1](xp), I2, num_samples)) +
+	max(0, 0.9 - sdp_full(model[3], model[1:2](xp), I1, num_samples)) +
+	max(0, 0.9 - sdp_partial(model[1], xp, I3, I2, num_samples)) +
+	max(0, 0.9 - sdp_partial(model[1:2], xp, I3, I1, num_samples)) +
+	max(0, 0.9 - sdp_partial(model[2], model[1](xp), I2, I1, num_samples))
 end
 
 
 function max_error(model, xp, (I3, I2, I1), num_samples = 1000)
-    max(max(0, 1.0 - sdp_full(model, xp, I3, num_samples)),
-        max(0, 1.0 - sdp_full(model[2:3], model[1](xp), I2, num_samples)),
-        max(0, 1.0 - sdp_full(model[3], model[1:2](xp), I1, num_samples)),
-        max(0, 1.0 - sdp_partial(model[1], xp, I3, I2, num_samples)),
-        max(0, 1.0 - sdp_partial(model[1:2], xp, I3, I1, num_samples)),
-        max(0, 1.0 - sdp_partial(model[2], model[1](xp), I2, I1, num_samples))
+    max(max(0, 0.9 - sdp_full(model, xp, I3, num_samples)),
+        max(0, 0.9 - sdp_full(model[2:3], model[1](xp), I2, num_samples)),
+        max(0, 0.9 - sdp_full(model[3], model[1:2](xp), I1, num_samples)),
+        max(0, 0.9 - sdp_partial(model[1], xp, I3, I2, num_samples)),
+        max(0, 0.9 - sdp_partial(model[1:2], xp, I3, I1, num_samples)),
+        max(0, 0.9 - sdp_partial(model[2], model[1](xp), I2, I1, num_samples))
     )
 end
 
@@ -93,12 +103,12 @@ end
 
 
 
-function full_beam_search2(sm::Subset_minimal, threshold_total_err=0.1, num_samples=100)
+function full_beam_search2(sm::Subset_minimal, threshold_total_err=0.1, num_samples=1000)
     I3, I2, I1 = init_sbitset(784), init_sbitset(256), init_sbitset(256)
     full_error = max_error(sm.nn, sm.input, (I3, I2, I1), num_samples)
 
-    while full_error > threshold_total_err
-        candidate = add_best(sm, (I3,I2,I1))[1]
+    while full_error > 0
+        candidate = add_best(sm, (I3,I2,I1), num_samples)[1]
         I3, I2, I1 = candidate.ii
 
         full_error = max_error(sm.nn, sm.input, (I3, I2, I1), num_samples)
@@ -107,7 +117,7 @@ function full_beam_search2(sm::Subset_minimal, threshold_total_err=0.1, num_samp
     return I3, I2, I1
 end
 
-function add_best(sm::Subset_minimal, (I3, I2, I1), num_samples = 100)
+function add_best(sm::Subset_minimal, (I3, I2, I1), num_samples)
     # searching through I3
     ii₁ = map(setdiff(1:784, I3)) do i
         Iᵢ = push(I3, i)
