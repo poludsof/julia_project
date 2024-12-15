@@ -1,31 +1,50 @@
-@inline function sample_input(img::AbstractVector, ii::SBitSet, num_samples::Integer)
-    ii = collect(ii)
-    x = similar(img, length(img), num_samples)
-    @inbounds for col in axes(x, 2)
-        for i in axes(x, 1)
-            x[i, col] = 2*rand(Bool) - 1
-        end
-        for i in ii
-            x[i, col] = img[i]
-        end
-    end
-    x
-end
+# @inline function sample_input(img::AbstractVector, ii::SBitSet, num_samples::Integer)
+#     ii = collect(ii)
+#     x = similar(img, length(img), num_samples)
+#     @inbounds for col in axes(x, 2)
+#         for i in axes(x, 1)
+#             x[i, col] = 2*rand(Bool) - 1
+#         end
+#         for i in ii
+#             x[i, col] = img[i]
+#         end
+#     end
+#     x
+# end
+
+
+# function sdp_full(model, img, ii, num_samples)
+#     # x = generate_random_img_with_fix_inputs(model, input, fix_inputs, num_samples)
+#     x = sample_input(img, ii, num_samples)
+#     mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
+# end
+
+# function sdp_partial(model, img, ii, jj, num_samples) # ii = I2 --> jj = I1
+#     isempty(jj) && return(1.0)
+#     isempty(ii) && return(0.0)
+#     jj = collect(jj)
+#     x = sample_input(img, ii, num_samples)
+#     mean(model(x)[jj, :] .== model(img)[jj, :])
+# end
+
 
 function sdp_full(model, img, ii, num_samples)
     # x = generate_random_img_with_fix_inputs(model, input, fix_inputs, num_samples)
-    x = sample_input(img, ii, num_samples)
-    mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
+    ii = collect(ii)
+    x = rand([-1,1], length(img), num_samples)
+	x[ii,:] .= img[ii]
+	mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
 end
 
 function sdp_partial(model, img, ii, jj, num_samples) # ii = I2 --> jj = I1
     isempty(jj) && return(1.0)
     isempty(ii) && return(0.0)
+    ii = collect(ii)
     jj = collect(jj)
-    x = sample_input(img, ii, num_samples)
-    mean(model(x)[jj, :] .== model(img)[jj, :])
+	x = rand([-1,1], length(img), num_samples)
+	x[ii,:] .= img[ii]
+	mean(model(x)[jj, :] .== model(img)[jj, :])
 end
-
 
 function heuristic(model, xp, (I3, I2, I1), num_samples = 1000)
 	max(0, 0.9 - sdp_full(model, xp, I3, num_samples)) +
@@ -38,12 +57,12 @@ end
 
 
 function max_error(model, xp, (I3, I2, I1), num_samples = 1000)
-    max(max(0, 0.9 - sdp_full(model, xp, I3, num_samples)),
-        max(0, 0.9 - sdp_full(model[2:3], model[1](xp), I2, num_samples)),
-        max(0, 0.9 - sdp_full(model[3], model[1:2](xp), I1, num_samples)),
-        max(0, 0.9 - sdp_partial(model[1], xp, I3, I2, num_samples)),
-        max(0, 0.9 - sdp_partial(model[1:2], xp, I3, I1, num_samples)),
-        max(0, 0.9 - sdp_partial(model[2], model[1](xp), I2, I1, num_samples))
+    max(max(0, 1 - sdp_full(model, xp, I3, num_samples)),
+        max(0, 1 - sdp_full(model[2:3], model[1](xp), I2, num_samples)),
+        max(0, 1 - sdp_full(model[3], model[1:2](xp), I1, num_samples)),
+        max(0, 1 - sdp_partial(model[1], xp, I3, I2, num_samples)),
+        max(0, 1 - sdp_partial(model[1:2], xp, I3, I1, num_samples)),
+        max(0, 1 - sdp_partial(model[2], model[1](xp), I2, I1, num_samples))
     )
 end
 
@@ -106,8 +125,8 @@ end
 function full_beam_search2(sm::Subset_minimal, threshold_total_err=0.1, num_samples=1000)
     I3, I2, I1 = init_sbitset(784), init_sbitset(256), init_sbitset(256)
     full_error = max_error(sm.nn, sm.input, (I3, I2, I1), num_samples)
-
-    while full_error > 0
+    println("Prev sampling")
+    while full_error > threshold_total_err
         candidate = add_best(sm, (I3,I2,I1), num_samples)[1]
         I3, I2, I1 = candidate.ii
 
@@ -140,23 +159,25 @@ function backward_dfs_search(sm::Subset_minimal, (I3, I2, I1), total_err=0.01, n
     initial_total_err = max_error(sm.nn, sm.input, (I3, I2, I1), num_samples)
     println("Initial max error: ", initial_total_err)
 
-    stack = [(heuristic(sm.nn, sm.input, (I3, I2, I1), num_samples), (I3, I2, I1))]  # Stack with heuristic value first
+    stack = [(max_error(sm.nn, sm.input, (I3, I2, I1), num_samples), (I3, I2, I1))]  # Stack with heuristic value first
     closed_list = Set{Tuple{SBitSet, SBitSet, SBitSet}}()
-    best_subsets = (I3, I2, I1)
 
-    max_stack_size = 10
+    best_subsets = (I3, I2, I1)
+    best_total_len = length(best_subsets[1]) + length(best_subsets[2]) + length(best_subsets[3])
+
+    max_stack_size = 100
     steps = 0
-    max_steps = 10
+    max_steps = 100
 
     while !isempty(stack)
 
         steps += 1
 		steps > max_steps && break
 
-        sort!(stack, by = x -> -x[1])
+        sort!(stack, by = x -> (-(length(x[2][1]) + length(x[2][2]) + length(x[2][3])), -x[1]))
         # println("first element h: ", stack[1][1], " last element h: ", stack[end][1])
-        length(stack) > max_stack_size && (stack = stack[end-max_stack_size+1:end])
-        current_heuristic, current_subsets = pop!(stack)
+        # length(stack) > max_stack_size && (stack = stack[end-max_stack_size+1:end])
+        current_error, current_subsets = pop!(stack)
         
         if current_subsets in closed_list
             continue
@@ -164,40 +185,41 @@ function backward_dfs_search(sm::Subset_minimal, (I3, I2, I1), total_err=0.01, n
 
         push!(closed_list, current_subsets)
 
-        current_error = max_error(sm.nn, sm.input, current_subsets, num_samples)
-        println("length: $((length(current_subsets[1]), length(current_subsets[2]), length(current_subsets[3]))) Current error: ", current_error, " Current heuristic: ", current_heuristic)
+        # current_error = max_error(sm.nn, sm.input, current_subsets, num_samples)
+        println("length: $((length(current_subsets[1]), length(current_subsets[2]), length(current_subsets[3]))) Current error: ", current_error)
 
-        if current_error <= total_err
+        total_len = length(current_subsets[1]) + length(current_subsets[2]) + length(current_subsets[3])
+        if total_len < best_total_len
             best_subsets = current_subsets
-            println("Valid subset found: $((length(current_subsets[1]), length(current_subsets[2]), length(current_subsets[3]))) with error: ", current_error)
-        else
-            I3, I2, I1 = deepcopy(current_subsets)
-            
-            for i in collect(I3)
-                new_subsets = (pop(I3, i), I2, I1)
-                new_heuristic = heuristic(sm.nn, sm.input, new_subsets, num_samples)
-                if new_heuristic < current_heuristic && new_subsets ∉ closed_list
-                    push!(stack, (new_heuristic, new_subsets))
-                end
+            best_total_len = length(best_subsets[1]) + length(best_subsets[2]) + length(best_subsets[3])
+        end
+        I3, I2, I1 = deepcopy(current_subsets)
+        
+        for i in collect(I3)
+            new_subsets = (pop(I3, i), I2, I1)
+            new_error = max_error(sm.nn, sm.input, new_subsets, num_samples)
+            if new_error <= initial_total_err && new_subsets ∉ closed_list
+                push!(stack, (new_error, new_subsets))
             end
+        end
 
-            for i in collect(I2)
-                new_subsets = (I3, pop(I2, i), I1)
-                new_heuristic = heuristic(sm.nn, sm.input, new_subsets, num_samples)
-                if new_heuristic < current_heuristic && new_subsets ∉ closed_list
-                    push!(stack, (new_heuristic, new_subsets))
-                end
+        for i in collect(I2)
+            new_subsets = (I3, pop(I2, i), I1)
+            new_error = max_error(sm.nn, sm.input, new_subsets, num_samples)
+            if new_error <= initial_total_err && new_subsets ∉ closed_list
+                push!(stack, (new_error, new_subsets))
             end
+        end
 
-            for i in collect(I1)
-                new_subsets = (I3, I2, pop(I1, i))
-                new_heuristic = heuristic(sm.nn, sm.input, new_subsets, num_samples)
-                if new_heuristic < current_heuristic && new_subsets ∉ closed_list
-                    push!(stack, (new_heuristic, new_subsets))
-                end
+        for i in collect(I1)
+            new_subsets = (I3, I2, pop(I1, i))
+            new_error = max_error(sm.nn, sm.input, new_subsets, num_samples)
+            if new_error <= initial_total_err && new_subsets ∉ closed_list
+                push!(stack, (new_error, new_subsets))
             end
         end
     end
+    println("final length: $((length(best_subsets[1]), length(best_subsets[2]), length(best_subsets[3])))")
     return best_subsets
 end
 
@@ -247,5 +269,5 @@ function full_beam_search_with_stack(sm::Subset_minimal, threshold_total_err=0.1
     end
 
     println("Stack is empty")
-    return I3, I2, I1
+    return (I3, I2, I1)
 end

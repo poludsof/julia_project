@@ -64,3 +64,6 @@ ii_set = best_set
 best_set = ii_set
 plot_set = Set([i for i in ii_set])
 plot_mnist_with_active_pixels(img, Set(plot_set))
+
+image_original = train_X[:, :, 1]
+plot_images(image_original, reshape(img, 28, 28))

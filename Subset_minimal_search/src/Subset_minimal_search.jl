@@ -21,6 +21,7 @@ using DataStructures
 const to = TimerOutput()
 
 
+
 struct Subset_minimal{NN, I, O}
     nn::NN
     input::I
@@ -38,6 +39,7 @@ include("full_search.jl")
 include("full_fwd_search.jl")
 include("full_search_sp.jl")
 include("neural_network_visualization.jl")
+include("vizualization.jl")
 
 
 
