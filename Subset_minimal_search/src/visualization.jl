@@ -1,13 +1,15 @@
 using CairoMakie
+println("Subsubset I2: ", subsubset_I2)
 
 I3 = [4,55,71,72,79,100,101,102,103,109,133,145,163,169,191,200,201,229,232,242,257,264,268,269,296,300,301,302,310,312,319,320,330,332,333,359,360,361,391,412,431,447,456,588,602,604,606,626,648,669,670,704,705,735,736,778]
 I2 = [2,27,42,52,55,67,69,82,83,84,85,98,104,156,183,186,191,197,209,213,224,234]
 I1 = [8,9,12,15,23,28,31,56,63,67,80,89,92,110,124,126,151,154,176,189,196,203,208,235,240,246,248,252,255]
 
+
 fig = Figure(resolution = (2000, 1800))
 # Number of neurons per layer
 neurons_per_column = [1, length(I2), length(I1), 1]
-neurons_per_column = [1, 4, 3, 1]
+# neurons_per_column = [1, 4, 3, 1]
 
 # A grid for each layer (arranged in a column)
 col_grids = [GridLayout(fig[1, i]; valign = :center) for i in eachindex(neurons_per_column)]
@@ -47,7 +49,25 @@ important_neurons= [[[1]],
                     [[1], [1], [1], [1]],
                     [[1], [2, 3], [3]], 
                     [[1]]]
-println(important_neurons)
+# println(important_neurons)
+# I2_subsubsets = subsubset_I2
+important_neurons[2] = [[1] for i in collect(1:length(I2))]
+important_neurons[3] = [[] for i in collect(1:length(I1))]
+important_neurons[4] = [[1:length(I1)...]]
+
+for i in 1:length(I1)
+    for j in subsubset_I1[i]
+        for iii in collect(1:length(I2))
+            if j == I2[iii]
+                println("Found for $j index is $iii in I2")
+                push!(important_neurons[3][i], iii)
+                break
+            end
+        end
+    end
+end
+println(subsubset_I1[1])
+println(important_neurons[4])
 
 # This utility function computes the "east" and "west" anchors (in latex parlance)
 function _compute_left_right_anchors(bbox_obs)
@@ -66,7 +86,7 @@ axis_anchors = [
     for col_of_axes in col_axes
 ]
 # Connect them up!
-neurons_per_column = [1, 4, 3, 1]
+# neurons_per_column = [1, 4, 3, 1]
 for layer_idx in collect(eachindex(neurons_per_column))[2:end] # 1:3
     neurons_for_this_layer = important_neurons[layer_idx]
     println("layer: ", layer_idx)

@@ -40,6 +40,7 @@ include("full_fwd_search.jl")
 include("full_search_sp.jl")
 include("neural_network_visualization.jl")
 include("vizualization.jl")
+include("subset_search_exmpl.jl")
 
 
 

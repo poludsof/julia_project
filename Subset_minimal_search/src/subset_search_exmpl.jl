@@ -9,23 +9,24 @@ function sdp_partial(model, img, ii, jj, num_samples)
 	mean(model(x)[jj, :] .== model(img)[jj, :])
 end
 
-function backward_for_index(sm::Subset_minimal, I3, index, threshold, num_samples)
-    println("Initial subset for index $index: ", I3)
+function backward_for_index(model, xp, ii, index, threshold, num_samples)
+    println("Initial subset for index $index: ", ii)
 
-    max_steps = 3000
+    max_steps = 200
     steps = 0
 
-    init_sdp = sdp_partial(sm.nn[1], sm.input, I3, index, num_samples)
-    stack = [(I3, init_sdp)]
-    subsets_for_index = [(I3, init_sdp)]
+    # init_sdp = sdp_partial(sm.nn[1], sm.input, ii, index, num_samples)
+    init_sdp = sdp_partial(model, xp, ii, index, num_samples)
+    stack = [(ii, init_sdp)]
+    subsets_for_index = [(ii, init_sdp)]
 
     closed_list = []
-    closed_list = push!(closed_list, (I3, init_sdp))
+    closed_list = push!(closed_list, (ii, init_sdp))
 
     while !isempty(stack)
         steps += 1
         steps > max_steps && break        
-        println("Step: $steps")
+        # println("Step: $steps")
 
         sort!(stack, by = x -> x[2])
         # sort!(stack, by = x -> (-length(x[1]), x[2]))
@@ -36,7 +37,8 @@ function backward_for_index(sm::Subset_minimal, I3, index, threshold, num_sample
 
         for i in curr_subset
             new_subset = pop(curr_subset, i)
-            new_sdp = sdp_partial(sm.nn[1], sm.input, new_subset, index, num_samples)
+            # new_sdp = sdp_partial(sm.nn[1], sm.input, new_subset, index, num_samples)
+            new_sdp = sdp_partial(model, xp, new_subset, index, num_samples)
             if new_sdp <= threshold && new_sdp >= 0.95
                 # println("Add subset ", length(new_subset), " sdp: ", new_sdp)
                 subsets_for_index = push!(subsets_for_index, (new_subset, new_sdp))
@@ -54,12 +56,25 @@ function backward_for_index(sm::Subset_minimal, I3, index, threshold, num_sample
     return final_subset
 end
 
+
 function subset_for_I2(sm::Subset_minimal, I3, I2, threshold, num_samples)
-    subset_i = SBitSet{32, UInt32}()
+    subset_all = []
+
     for iᵢ in I2
-        subset_i = backward_for_index(sm, I3, iᵢ, threshold, num_samples)
-        # println("Subset for index $iᵢ with length ", length(subset_i), ": ", subset_i)
-        break
+        subset_i = backward_for_index(sm.nn[1], sm.input, I3, iᵢ, threshold, num_samples)
+        push!(subset_all, subset_i)
     end
-    return subset_i
+
+    return subset_all
+end
+
+function subset_for_I1(sm::Subset_minimal, I3, I2, I1, threshold, num_samples)
+    subset_all = []
+
+    for iᵢ in I1
+        subset_i = backward_for_index(sm.nn[2], sm.nn[1](sm.input), I2, iᵢ, threshold, num_samples)
+        push!(subset_all, subset_i)
+    end
+
+    return subset_all
 end

@@ -83,9 +83,9 @@ reduced_sets = backward_dfs_search(Subset_minimal(model, img, label_img), best_s
 # red_test_sets = backward_dfs_search(Subset_minimal(model, img, label_img), (I3_test, I2_test, I1_test), 0.7, num_samples)
 
 # TEST stack 
-stack_test = [(SBitSet{32, UInt32}(collect(1:5)), 10, 0.1), (SBitSet{32, UInt32}(collect(1:4)), 9, 0.2), (SBitSet{32, UInt32}(collect(1:6)), 8, 0.3)]
-sort!(stack_test, by = x -> -length(x[1]))
-println(pop!(stack_test))
+# stack_test = [(SBitSet{32, UInt32}(collect(1:5)), 10, 0.1), (SBitSet{32, UInt32}(collect(1:4)), 9, 0.2), (SBitSet{32, UInt32}(collect(1:6)), 8, 0.3)]
+# sort!(stack_test, by = x -> -length(x[1]))
+# println(pop!(stack_test))
 # max_stack_size = 2
 # stack_test = stack_test[end-max_stack_size+1:end]
 
@@ -98,7 +98,6 @@ println(pop!(stack_test))
 best_set = full_beam_search_with_stack(Subset_minimal(model, img, label_img), 0.8, num_samples)
 
 
-
 # Length of ii: (71, 25, 31), full_error: (hsum = 0.0, hmax = 0.0)
 
 # I3 = SBitSet{13,UInt64}{4,21,46,55,71,72,79,100,101,102,103,109,116,133,134,145,158,163,169,191,197,200,201,229,232,242,257,262,264,267,268,269,296,300,301,302,310,312,319,320,330,332,333,359,360,361,391,404,412,431,447,456,538,588,602,604,606,626,627,648,667,669,670,679,698,704,705,735,736,778,781}
@@ -107,17 +106,14 @@ best_set = full_beam_search_with_stack(Subset_minimal(model, img, label_img), 0.
 
 best_set = full_beam_search2(Subset_minimal(model, img, label_img))
 
-I3_array = [4,21,46,55,71,72,79,100,101,102,103,109,116,133,134,145,158,163,169,191,197,200,201,229,232,242,257,262,264,267,268,269,296,300,301,302,310,312,319,320,330,332,333,359,360,361,391,404,412,431,447,456,538,588,602,604,606,626,627,648,667,669,670,679,698,704,705,735,736,778,781]
-I2_array = [2,27,42,52,55,60,67,69,82,83,84,85,98,104,147,156,183,186,191,197,209,213,224,230,234]
-I1_array = [8,9,12,15,19,23,28,31,52,56,63,67,80,89,92,110,124,126,151,154,176,189,196,203,208,235,240,246,248,252,255]
 
-I3 = SBitSet{13, UInt64}()
-I2 = SBitSet{4, UInt64}()
-I1 = SBitSet{4, UInt64}()
+I3_array = [4,55,71,72,79,100,101,102,103,109,133,145,163,169,191,200,201,229,232,242,257,264,268,269,296,300,301,302,310,312,319,320,330,332,333,359,360,361,391,412,431,447,456,588,602,604,606,626,648,669,670,704,705,735,736,778]
+I2_array = [2,27,42,52,55,67,69,82,83,84,85,98,104,156,183,186,191,197,209,213,224,234]
+I1_array = [8,9,12,15,23,28,31,56,63,67,80,89,92,110,124,126,151,154,176,189,196,203,208,235,240,246,248,252,255]
 
-I3 = man_push(I3_array, I3)
-I2 = man_push(I2_array, I2)
-I1 = man_push(I1_array, I1)
+I3 = man_push(I3_array, SBitSet{13, UInt64}())
+I2 = man_push(I2_array, SBitSet{4, UInt64}())
+I1 = man_push(I1_array, SBitSet{4, UInt64}())
 redcd = [158,169,201,264,269,300,312,333,391,404,412,447,604,606,669,705,735]
 subsubset_I2 = man_push(redcd, SBitSet{32, UInt32}())
 
@@ -140,4 +136,22 @@ num_samples = 1500
 subsubset_I2 = subset_for_I2(Subset_minimal(model, img, label_img), I3, I2, subset_threshold, num_samples)
 println("Subsubset I2: ", subsubset_I2)
 #TEST
-sdp_partial(model[1], img, subsubset_I2, 2, 1000)
+sdp_partial(model[1], img, subsubset_I2[1], 2, 1000)
+
+println("Subset I2: ", I2)
+subsubset_I1 = subset_for_I1(Subset_minimal(model, img, label_img), I3, I2, I1, subset_threshold, num_samples)
+println("Subsubset I1: ", subsubset_I1)
+
+for i in subsubset_I1
+    println("Subset: ", i)
+    for j in i
+        i = 1
+        for k in I2
+            if j == k
+                println("Found for $j index is $i in I2")
+                break
+            end
+            i += 1
+        end
+    end
+end
