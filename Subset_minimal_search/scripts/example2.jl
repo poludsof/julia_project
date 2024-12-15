@@ -77,7 +77,7 @@ reduced_sets = backward_dfs_search(Subset_minimal(model, img, label_img), best_s
 
 
 # TEST backward
-# I3_test = SBitSet{32, UInt32}(collect(1:500))
+# I3_test = SBitSet{32, UInt32}(collect(5:10))
 # I2_test = SBitSet{32, UInt32}(collect(1:40))
 # I1_test = SBitSet{32, UInt32}(collect(1:68))
 # red_test_sets = backward_dfs_search(Subset_minimal(model, img, label_img), (I3_test, I2_test, I1_test), 0.7, num_samples)
@@ -118,6 +118,8 @@ I1 = SBitSet{4, UInt64}()
 I3 = man_push(I3_array, I3)
 I2 = man_push(I2_array, I2)
 I1 = man_push(I1_array, I1)
+redcd = [158,169,201,264,269,300,312,333,391,404,412,447,604,606,669,705,735]
+subsubset_I2 = man_push(redcd, SBitSet{32, UInt32}())
 
 function man_push(array, sbitset)
     for i in array
@@ -129,3 +131,10 @@ end
 reduced_sets = backward_dfs_search(Subset_minimal(model, img, label_img), (I3, I2, I1), 0.05, num_samples)
 max_error(model, img, reduced_sets, num_samples)
 max_error(model, img, (I3, I2, I1), num_samples)
+
+subset_threshold = 0.98
+num_samples = 1500
+subsubset_I2 = subset_for_I2(Subset_minimal(model, img, label_img), I3, I2, subset_threshold, num_samples)
+println("Subsubset I2: ", subsubset_I2)
+#TEST
+sdp_partial(model[1], img, subsubset_I2, 2, 1000)

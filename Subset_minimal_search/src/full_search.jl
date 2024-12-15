@@ -186,7 +186,7 @@ function backward_dfs_search(sm::Subset_minimal, (I3, I2, I1), total_err=0.01, n
         push!(closed_list, current_subsets)
 
         # current_error = max_error(sm.nn, sm.input, current_subsets, num_samples)
-        println("length: $((length(current_subsets[1]), length(current_subsets[2]), length(current_subsets[3]))) Current error: ", current_error)
+        println("step $step, length: $((length(current_subsets[1]), length(current_subsets[2]), length(current_subsets[3]))) Current error: ", current_error)
 
         total_len = length(current_subsets[1]) + length(current_subsets[2]) + length(current_subsets[3])
         if total_len < best_total_len
