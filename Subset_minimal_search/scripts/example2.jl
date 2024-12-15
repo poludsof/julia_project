@@ -132,6 +132,9 @@ reduced_sets = backward_dfs_search(Subset_minimal(model, img, label_img), (I3, I
 max_error(model, img, reduced_sets, num_samples)
 max_error(model, img, (I3, I2, I1), num_samples)
 
+println("Reduced sets: ", reduced_sets)
+
+
 subset_threshold = 0.98
 num_samples = 1500
 subsubset_I2 = subset_for_I2(Subset_minimal(model, img, label_img), I3, I2, subset_threshold, num_samples)
