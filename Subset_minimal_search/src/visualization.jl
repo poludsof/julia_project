@@ -1,10 +1,20 @@
 using CairoMakie
 println("Subsubset I2: ", subsubset_I2)
+I3
+img_bin = train_X_binary[:, 1]
+img = train_X_bin_neg[:, 1]
+x = rand([-1,1], length(img))
+ii = collect(I3)
+img[ii] .= 2
+img_resh = reshape(img, 28, 28)
+# label_img = argmax(train_y[:, 1]) - 1
 
-I3 = [4,55,71,72,79,100,101,102,103,109,133,145,163,169,191,200,201,229,232,242,257,264,268,269,296,300,301,302,310,312,319,320,330,332,333,359,360,361,391,412,431,447,456,588,602,604,606,626,648,669,670,704,705,735,736,778]
-I2 = [2,27,42,52,55,67,69,82,83,84,85,98,104,156,183,186,191,197,209,213,224,234]
-I1 = [8,9,12,15,23,28,31,56,63,67,80,89,92,110,124,126,151,154,176,189,196,203,208,235,240,246,248,252,255]
+# I3 = [4,55,71,72,79,100,101,102,103,109,133,145,163,169,191,200,201,229,232,242,257,264,268,269,296,300,301,302,310,312,319,320,330,332,333,359,360,361,391,412,431,447,456,588,602,604,606,626,648,669,670,704,705,735,736,778]
+# I2 = [2,27,42,52,55,67,69,82,83,84,85,98,104,156,183,186,191,197,209,213,224,234]
+# I1 = [8,9,12,15,23,28,31,56,63,67,80,89,92,110,124,126,151,154,176,189,196,203,208,235,240,246,248,252,255]
+I3, I2, I1 = stets_to_vis
 
+I2 = [i for i in I2]
 
 fig = Figure(resolution = (2000, 1800))
 # Number of neurons per layer
@@ -20,16 +30,36 @@ col_axes = [
 ]
 
 # Plot into the axes
+col = 1
+row = 1
 for col_of_axes in col_axes
+    row = 1
     for axis in col_of_axes
+        img = train_X_bin_neg[:, 1]
+        println("col: $col, row: $row")
         hidedecorations!(axis)
         hidespines!(axis)
         axis.aspect[] = DataAspect()
-        heatmap!(axis, rand(28, 28); colormap = :plasma)
+        axis.yreversed[] = true
+        if col == 1
+            ii = collect(I3)
+        elseif col == 2
+            ii = collect(subsubset_I2[row])
+        elseif col == 3
+            ii = collect(subsubset_I1[row])
+        else
+            ii = collect(I3)
+        end
+
+        img[ii] .= 2
+        img_resh = reshape(img, 28, 28)
+        heatmap!(axis, img_resh; colormap = :viridis)
+        row += 1
     end
+    col += 1
 end
 # Size the columns that are not the input/output columns appropriately
-l = 1
+# l = 1
 for (nlayers, grid) in collect(zip(neurons_per_column, col_grids))[begin+1:end-1]
     grid.tellheight[] = false
     grid.height[] = Relative(nlayers / maximum(neurons_per_column))
@@ -66,8 +96,8 @@ for i in 1:length(I1)
         end
     end
 end
-println(subsubset_I1[1])
-println(important_neurons[4])
+println(subsubset_I1[9])
+# println(important_neurons[4])
 
 # This utility function computes the "east" and "west" anchors (in latex parlance)
 function _compute_left_right_anchors(bbox_obs)
@@ -110,3 +140,4 @@ end
 
 fig
 
+save("my_figure.png", fig)

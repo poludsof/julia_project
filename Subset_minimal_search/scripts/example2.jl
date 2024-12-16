@@ -55,9 +55,13 @@ num_samples=1000
 #previous sampling + my stop condition:
 # Length of ii: (73, 24, 41), full_error: 0.09899999999999998 heuristic: 0.0
 best_set = full_beam_search2(Subset_minimal(model, img, label_img), threshold, num_samples)
-reduced_sets = backward_dfs_search(Subset_minimal(model, img, label_img), best_set, 0.05, num_samples)
+reduced_sets = backward_dfs_search(Subset_minimal(model, img, label_img), best_set, num_samples)
 # length: (306, 84, 70) Current error: 0.08714285714285719 Current heuristic: 0.04973809523809514
+memory_reduced_sets = deepcopy(reduced_sets)
 
+#TEST reduced sets
+max_error(model, img, best_set, 0.9, num_samples) + 0.9
+max_error(model, img, reduced_sets, 0.9, num_samples) + 0.9
 
 # I3_set, I2_set, I1_set = best_set
 # println("Subset I3: ", I3_set)
@@ -104,9 +108,6 @@ best_set = full_beam_search_with_stack(Subset_minimal(model, img, label_img), 0.
 # I2 = SBitSet{4,UInt64}{2,27,42,52,55,60,67,69,82,83,84,85,98,104,147,156,183,186,191,197,209,213,224,230,234}
 # I1 = SBitSet{4,UInt64}{8,9,12,15,19,23,28,31,52,56,63,67,80,89,92,110,124,126,151,154,176,189,196,203,208,235,240,246,248,252,255}
 
-best_set = full_beam_search2(Subset_minimal(model, img, label_img))
-
-
 I3_array = [4,55,71,72,79,100,101,102,103,109,133,145,163,169,191,200,201,229,232,242,257,264,268,269,296,300,301,302,310,312,319,320,330,332,333,359,360,361,391,412,431,447,456,588,602,604,606,626,648,669,670,704,705,735,736,778]
 I2_array = [2,27,42,52,55,67,69,82,83,84,85,98,104,156,183,186,191,197,209,213,224,234]
 I1_array = [8,9,12,15,23,28,31,56,63,67,80,89,92,110,124,126,151,154,176,189,196,203,208,235,240,246,248,252,255]
@@ -124,15 +125,9 @@ function man_push(array, sbitset)
     return sbitset
 end
 
-reduced_sets = backward_dfs_search(Subset_minimal(model, img, label_img), (I3, I2, I1), 0.05, num_samples)
-max_error(model, img, reduced_sets, num_samples)
-max_error(model, img, (I3, I2, I1), num_samples)
-
-println("Reduced sets: ", reduced_sets)
-
-
 subset_threshold = 0.98
 num_samples = 1500
+I3, I2, I1 = memory_reduced_sets
 subsubset_I2 = subset_for_I2(Subset_minimal(model, img, label_img), I3, I2, subset_threshold, num_samples)
 println("Subsubset I2: ", subsubset_I2)
 #TEST
@@ -142,16 +137,19 @@ println("Subset I2: ", I2)
 subsubset_I1 = subset_for_I1(Subset_minimal(model, img, label_img), I3, I2, I1, subset_threshold, num_samples)
 println("Subsubset I1: ", subsubset_I1)
 
-for i in subsubset_I1
-    println("Subset: ", i)
-    for j in i
-        i = 1
-        for k in I2
-            if j == k
-                println("Found for $j index is $i in I2")
-                break
-            end
-            i += 1
-        end
-    end
-end
+
+
+
+num_samples = 1000
+fwd_best_set = full_beam_search_with_stack(Subset_minimal(model, img, label_img), 0.1, num_samples)
+fwd_reduced_sets = backward_dfs_search(Subset_minimal(model, img, label_img), fwd_best_set, num_samples)
+max_error(model, img, fwd_best_set, 0.9, num_samples)
+max_error(model, img, stets_to_vis, 0.9, num_samples)
+
+
+stets_to_vis = deepcopy(fwd_reduced_sets)
+I3, I2, I1 = stets_to_vis
+# final length: (54, 21, 26)
+# (SBitSet{13,UInt64}{7,63,73,79,96,101,110,133,145,155,161,163,174,191,201,207,232,237,242,257,296,298,299,300,301,302,326,328,330,338,355,357,358,359,360,378,390,404,417,432,441,489,538,559,567,602,604,626,636,643,647,700,705,729,}, SBitSet{4,UInt64}{11,27,32,42,60,67,69,83,84,85,112,156,157,183,186,190,191,197,209,217,224,}, SBitSet{4,UInt64}{5,7,8,9,12,19,23,28,32,48,51,52,76,113,151,154,204,206,208,215,216,235,246,248,252,255,})
+subsubset_I2 = subset_for_I2(Subset_minimal(model, img, label_img), I3, I2, subset_threshold, num_samples)
+subsubset_I1 = subset_for_I1(Subset_minimal(model, img, label_img), I3, I2, I1, subset_threshold, num_samples)

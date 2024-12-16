@@ -37,9 +37,9 @@ include("milp.jl")
 include("random_sampling.jl")
 include("full_search.jl")
 include("full_fwd_search.jl")
-include("full_search_sp.jl")
-include("neural_network_visualization.jl")
-include("vizualization.jl")
+# include("full_search_sp.jl")
+# include("neural_network_visualization.jl")
+include("visualization.jl")
 include("subset_search_exmpl.jl")
 
 
