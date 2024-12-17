@@ -12,7 +12,7 @@ end
 function backward_for_index(model, xp, ii, index, threshold, num_samples)
     println("Initial subset for index $index: ", ii)
 
-    max_steps = 200
+    max_steps = 100
     steps = 0
 
     # init_sdp = sdp_partial(sm.nn[1], sm.input, ii, index, num_samples)
