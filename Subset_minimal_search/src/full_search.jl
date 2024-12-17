@@ -108,11 +108,6 @@ function backward_dfs_search(sm::Subset_minimal, (I3, I2, I1), num_samples=100)
         sort!(stack, by = x -> (-(length(x[2][1]) + length(x[2][2]) + length(x[2][3])), -x[1]))
         # println("first element h: ", stack[1][1], " last element h: ", stack[end][1])
         current_error, current_subsets = pop!(stack)
-        
-        if current_subsets in closed_list
-            println("ALREADY VISITED")
-            continue
-        end
 
         push!(closed_list, current_subsets)
 

@@ -1,8 +1,7 @@
 # using CairoMakie
 
-img_bin = train_X_binary[:, 1]
-img = train_X_bin_neg[:, 1]
-
+# img = train_X_binary[:, 1]
+# img = train_X_bin_neg[:, 1]
 I3 = [7,63,73,79,96,101,110,133,145,155,161,163,174,191,201,207,232,237,242,257,296,298,299,300,301,302,326,328,330,338,355,357,358,359,360,378,390,404,417,432,441,489,538,559,567,602,604,626,636,643,647,700,705,729]
 I2 = [11,27,32,42,60,67,69,83,84,85,112,156,157,183,186,190,191,197,209,217,224]
 I1 = [5,7,8,9,12,19,23,28,32,48,51,52,76,113,151,154,204,206,208,215,216,235,246,248,252,255]
@@ -65,7 +64,7 @@ subsubset_I1 = [
 
 # I3, I2, I1 = stets_to_vis
 # I2 = [i for i in I2]
-
+fig = Figure()
 fig = Figure(resolution = (2000, 1800))
 # Number of neurons per layer
 neurons_per_column = [1, length(I2), length(I1), 1]
@@ -166,7 +165,7 @@ for i in 1:length(I1)
         end
     end
 end
-println(subsubset_I1[9])
+# println(subsubset_I1[9])
 # println(important_neurons[4])
 
 # This utility function computes the "east" and "west" anchors (in latex parlance)

@@ -6,7 +6,6 @@
 #     fix_inputs
 # end
 
-""" problem with found_minimal_set ? useless? """ # TODO
 # global visited = Set{Vector{Int}}()
 function dfs_cache(sm::Subset_minimal, given_input_set::Vector{Int}, steps::Int, max_steps::Int, found_minimal_set::Bool)
     if steps >= max_steps || found_minimal_set || in(given_input_set, visited)
