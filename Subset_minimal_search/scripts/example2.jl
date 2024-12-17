@@ -40,20 +40,20 @@ label_img = argmax(train_y[:, 1]) - 1
 
 
 # Greedy approach + backward search
-threshold=0.1
-num_samples=1000
-best_set = full_beam_search2(Subset_minimal(model, img, label_img), threshold, num_samples)
-reduced_sets = backward_dfs_search(Subset_minimal(model, img, label_img), best_set, num_samples)
+threshold = 0.1
+num_samples = 1000
+best_set = greedy_subsets_search(Subset_minimal(model, img, label_img), threshold, num_samples)
+reduced_sets = backward_priority_reduction(Subset_minimal(model, img, label_img), best_set, threshold, num_samples)
 #TEST reduced sets
 max_error(model, img, best_set, 0.9, num_samples)
 max_error(model, img, reduced_sets, 0.9, num_samples)
 
 
 # Forward search with priority stack + backward search
-threshold=0.1
+threshold = 0.1
 num_samples = 1000
-fwd_best_set = full_beam_search_with_stack(Subset_minimal(model, img, label_img), threshold, num_samples)
-fwd_reduced_sets = backward_dfs_search(Subset_minimal(model, img, label_img), fwd_best_set, num_samples)
+fwd_best_set = forward_priority_search(Subset_minimal(model, img, label_img), threshold, num_samples)
+fwd_reduced_sets = backward_priority_reduction(Subset_minimal(model, img, label_img), fwd_best_set, threshold, num_samples)
 # Test reduced sets
 max_error(model, img, fwd_best_set, 0.9, num_samples)
 max_error(model, img, fwd_reduced_sets, 0.9, num_samples)
@@ -83,7 +83,7 @@ I3, I2, I1 = fwd_reduced_sets
 
 # Implicative subsets for I2 and I1:
 #=
-subsubset_I2 = [
+subsubset_I2 = [rog
     SBitSet{13,UInt64}([7,96,101,110,155,161,174,201,237,242,257,298,301,326,328,330,338,378,432,559,602,604,626,729]),
     SBitSet{13,UInt64}([110,133,145,161,163,174,242,257,296,299,301,302,378,404,417,538,559,636]),
     SBitSet{13,UInt64}([79,96,101,145,155,161,174,201,207,232,301,302,326,338,359,432,441,489,559,567,647,700,705,729]),
