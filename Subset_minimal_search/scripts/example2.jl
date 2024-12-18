@@ -61,12 +61,13 @@ max_error(model, img, fwd_reduced_sets, 0.9, num_samples)
 
 # Search for subsets implicating indices of 2nd and 3rd layers
 I3, I2, I1 = fwd_reduced_sets
-subset_threshold = 0.98
-num_samples = 1000
-subsubset_I2 = subset_for_I2(Subset_minimal(model, img, label_img), I3, I2, subset_threshold, num_samples)
-subsubset_I1 = subset_for_I1(Subset_minimal(model, img, label_img), I3, I2, I1, subset_threshold, num_samples)
-
-
+subset_threshold = 0.9
+num_samples = 1500
+subsubset_I2 = implicative_subsets(model[1], img, I3, I2, subset_threshold, num_samples)
+subsubset_I1 = implicative_subsets(model[2], model[1](img), I2, I1, subset_threshold, num_samples)
+#check implicative_subsets
+# sdp_partial(model[1], img, I3, I2, num_samples)
+# max_error(model, img, (I3, I2, I1), 0.9, num_samples)
 
 
 """RESULTS:"""
@@ -74,16 +75,13 @@ subsubset_I1 = subset_for_I1(Subset_minimal(model, img, label_img), I3, I2, I1, 
 # Reduced length: (54, 21, 26) 
 
 # Reduced (I3, I2, I1):
-#=
 fwd_reduced_sets = [SBitSet{13,UInt64}([7,63,73,79,96,101,110,133,145,155,161,163,174,191,201,207,232,237,242,257,296,298,299,300,301,302,326,328,330,338,355,357,358,359,360,378,390,404,417,432,441,489,538,559,567,602,604,626,636,643,647,700,705,729]),
                     SBitSet{4,UInt64}([11,27,32,42,60,67,69,83,84,85,112,156,157,183,186,190,191,197,209,217,224]),
                     SBitSet{4,UInt64}([5,7,8,9,12,19,23,28,32,48,51,52,76,113,151,154,204,206,208,215,216,235,246,248,252,255])]
 I3, I2, I1 = fwd_reduced_sets
-=#
 
 # Implicative subsets for I2 and I1:
-#=
-subsubset_I2 = [rog
+subsubset_I2 = [
     SBitSet{13,UInt64}([7,96,101,110,155,161,174,201,237,242,257,298,301,326,328,330,338,378,432,559,602,604,626,729]),
     SBitSet{13,UInt64}([110,133,145,161,163,174,242,257,296,299,301,302,378,404,417,538,559,636]),
     SBitSet{13,UInt64}([79,96,101,145,155,161,174,201,207,232,301,302,326,338,359,432,441,489,559,567,647,700,705,729]),
@@ -107,7 +105,7 @@ subsubset_I2 = [rog
     SBitSet{13,UInt64}([7,63,73,79,96,110,145,155,174,191,207,232,242,302,328,330,338,357,358,359,360,390,417,432,489,559,647,700])
 ]
 subsubset_I1 = [
-    SBitSet{4,UInt64}([11,27,32,42,60,67,69,83,84,85,112,156,157,183,186,190,191,197,209,217,224]),
+    SBitSet{4,UInt64}([11,42,83,85,156,183,190,209,224]),
     SBitSet{4,UInt64}([42,85,112,183,190]),
     SBitSet{4,UInt64}([27,42,186,190,197]),
     SBitSet{4,UInt64}([11,27,32,42,60,67,69,83,84,85,112,156,157,183,186,190,191,197,209,217,224]),
@@ -134,4 +132,3 @@ subsubset_I1 = [
     SBitSet{4,UInt64}([42,84,85,157,209,217]),
     SBitSet{4,UInt64}([11,27,32,42,60,67,69,83,84,85,112,156,157,183,186,190,191,197,209,217,224])
 ]
-=#

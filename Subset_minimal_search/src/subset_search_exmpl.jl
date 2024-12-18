@@ -1,24 +1,34 @@
+@inline function sample_input(img::AbstractVector, ii::SBitSet, num_samples::Integer)
+    ii = collect(ii)
+    x = similar(img, length(img), num_samples)
+    @inbounds for col in axes(x, 2)
+        for i in axes(x, 1)
+            x[i, col] = 2*rand(Bool) - 1
+        end
+        for i in ii
+            x[i, col] = img[i]
+        end
+    end
+    x
+end
 
 function sdp_partial(model, img, ii, jj, num_samples)
     isempty(jj) && return(1.0)
     isempty(ii) && return(0.0)
-    ii = collect(ii)
     jj = collect(jj)
-	x = rand([-1,1], length(img), num_samples)
-	x[ii,:] .= img[ii]
-	mean(model(x)[jj, :] .== model(img)[jj, :])
+    x = sample_input(img, ii, num_samples)
+    mean(model(x)[jj, :] .== model(img)[jj, :])
 end
 
 function backward_for_index(model, xp, ii, index, threshold, num_samples)
-    println("Initial subset for index $index: ", ii)
 
-    max_steps = 100
+    max_steps = 200
     steps = 0
 
-    # init_sdp = sdp_partial(sm.nn[1], sm.input, ii, index, num_samples)
     init_sdp = sdp_partial(model, xp, ii, index, num_samples)
     stack = [(ii, init_sdp)]
     subsets_for_index = [(ii, init_sdp)]
+    println("Initial subset for index $index: ", ii, " initial sdp: ", init_sdp)
 
     closed_list = []
     closed_list = push!(closed_list, (ii, init_sdp))
@@ -31,15 +41,14 @@ function backward_for_index(model, xp, ii, index, threshold, num_samples)
         sort!(stack, by = x -> x[2])
         # sort!(stack, by = x -> (-length(x[1]), x[2]))
 
-
         curr_subset, curr_sdp = pop!(stack)
         # println("Current subset for index $index, length: $(length(curr_subset)), SDP: $curr_sdp")
 
         for i in curr_subset
             new_subset = pop(curr_subset, i)
-            # new_sdp = sdp_partial(sm.nn[1], sm.input, new_subset, index, num_samples)
             new_sdp = sdp_partial(model, xp, new_subset, index, num_samples)
-            if new_sdp <= threshold && new_sdp >= 0.95
+            # if new_sdp <= threshold && new_sdp >= (threshold-0.05)  # to avoid too bad solutions
+            if new_sdp >= threshold
                 # println("Add subset ", length(new_subset), " sdp: ", new_sdp)
                 subsets_for_index = push!(subsets_for_index, (new_subset, new_sdp))
             end
@@ -57,24 +66,11 @@ function backward_for_index(model, xp, ii, index, threshold, num_samples)
 end
 
 
-function subset_for_I2(sm::Subset_minimal, I3, I2, threshold, num_samples)
-    subset_all = []
-
-    for iᵢ in I2
-        subset_i = backward_for_index(sm.nn[1], sm.input, I3, iᵢ, threshold, num_samples)
-        push!(subset_all, subset_i)
+function implicative_subsets(model, xp, prev_layer_I, layer_I, threshold, num_samples)
+    subsets = []
+    for i in layer_I
+        subset_i = backward_for_index(model, xp, prev_layer_I, i, threshold, num_samples)
+        push!(subsets, subset_i)
     end
-
-    return subset_all
-end
-
-function subset_for_I1(sm::Subset_minimal, I3, I2, I1, threshold, num_samples)
-    subset_all = []
-
-    for iᵢ in I1
-        subset_i = backward_for_index(sm.nn[2], sm.nn[1](sm.input), I2, iᵢ, threshold, num_samples)
-        push!(subset_all, subset_i)
-    end
-
-    return subset_all
+    return subsets
 end
