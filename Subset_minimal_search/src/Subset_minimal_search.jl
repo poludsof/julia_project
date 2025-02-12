@@ -15,7 +15,9 @@ using CairoMakie
 using Makie
 using Makie.Colors
 using Serialization
-using DataStructures  
+using DataStructures
+using Distributions
+using MixFit
 
 
 const to = TimerOutput()
@@ -37,7 +39,6 @@ include("beam_search.jl")
 include("full_search.jl")
 include("full_fwd_search.jl")
 # include("neural_network_visualization.jl")
-include("visualization.jl")
 include("subset_search_exmpl.jl")
 
 
