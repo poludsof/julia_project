@@ -52,7 +52,7 @@ X = reshape(X, 28*28, :)'
 
 K = 10
 π, θ = bernoulli_mixture_em(X, K)
-π, θ = bernoulli_mixture_em_supervised(X, train_y, K)
+# π, θ = bernoulli_mixture_em_supervised(X, train_y, K)
 
 
 
@@ -80,9 +80,11 @@ end
 generated_image = generate_bin_sample(θ, 6)
 plot_mnist_image(generated_image)
 
-
+# Plotting the learned components
 for k in 1:K
     plot_mnist_image(θ[k, :])
     # generated_image = generate_sample(θ, k)
     # plot_mnist_image(generated_image)
 end
+
+# trying to do commit
