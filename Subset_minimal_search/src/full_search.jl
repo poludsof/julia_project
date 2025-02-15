@@ -12,19 +12,6 @@
     x
 end
 
-function sdp_full(model, img, ii, num_samples)
-    x = sample_input(img, ii, num_samples)
-    mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
-end
-
-function sdp_partial(model, img, ii, jj, num_samples)
-    isempty(jj) && return(1.0)
-    isempty(ii) && return(0.0)
-    jj = collect(jj)
-    x = sample_input(img, ii, num_samples)
-    mean(model(x)[jj, :] .== model(img)[jj, :])
-end
-
 function h_vals(model, xp, (I3, I2, I1), num_samples)
     (sdp_full(model, xp, I3, num_samples),
     sdp_full(model[2:3], model[1](xp), I2, num_samples),

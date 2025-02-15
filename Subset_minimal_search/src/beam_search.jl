@@ -9,16 +9,6 @@ function generate_random_img_with_fix_inputs(sm::Subset_minimal, ii::Vector{<:In
     x
 end
 
-function calculate_ep(sm::Subset_minimal, fix_inputs::SBitSet, num_samples::Int)
-    x = generate_random_img_with_fix_inputs(sm, fix_inputs, num_samples)
-    mean(Flux.softmax(sm.nn(x))[sm.output + 1,:] )
-end
-
-function calculate_sdp(sm::Subset_minimal, fix_inputs::SBitSet{N,T}, num_samples::Int) where {N, T}
-    x = generate_random_img_with_fix_inputs(sm, fix_inputs, num_samples)
-    mean(Flux.onecold(nn(x)) .== sm.output + 1)
-end
-
 
 function beam_search(sm::Subset_minimal, calc_func::Function, fix_inputs::SBitSet{N, T}, num_best::Int, num_samples::Int, best_results=Array{Tuple{SBitSet{N, T}, Float32}, 1}()) where {N, T}
     worst_from_best_threshold = isempty(best_results) ? 0.0 : best_results[end][2]

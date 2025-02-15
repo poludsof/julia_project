@@ -3,13 +3,6 @@
 Forward search with priority queue based on sdp criterion value
 """
 
-function compute_sdp_fwd(model, img, ii, num_samples)
-    ii = collect(ii)
-    x = rand([-1,1], length(img), num_samples)
-    x[ii,:] .= img[ii]
-    mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
-end
-
 function expand!(open_list::PriorityQueue{SBitSet{N, T}, Float64}, close_list::Set{SBitSet{N, T}}, subset::SBitSet{N, T}, model, xₛ, yₛ, num_samples) where {N, T}
 
     remaining_features = setdiff(1:size(xₛ, 1), subset)
@@ -66,7 +59,6 @@ function forward_search(model, xₛ, yₛ; max_steps::Int=10000, sdp_threshold::
     reason = steps > max_steps ? :iter_limit : :exhausted
     return solutions, reason
 end
-
 
 function choose_best_solution(solutions, model, img, num_samples)
     best_solution = []

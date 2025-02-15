@@ -14,10 +14,10 @@ using Subset_minimal_search.CairoMakie
 
 using Subset_minimal_search: preprocess_binary, onehot_labels, accuracy, get_minimal_set_generic, Subset_minimal
 
-# === Create a neural network ===
+``` Define the neural network. ```
 nn = Chain(Dense(28^2, 28, relu), Dense(28,28,relu), Dense(28,10)) 
 
-# Prepare data and model
+``` Load the MNIST dataset and preprocess it. ```
 train_X, train_y = MNIST(split=:train)[:]
 test_X, test_y = MNIST(split=:test)[:]
 
@@ -28,7 +28,7 @@ train_y = onehot_labels(train_y)
 test_y = onehot_labels(test_y)
 
  
-# === Training ===
+``` Train the neural network and evaluate the accuracy. ```  
 nn = Subset_minimal_search.train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
 
 # argmax(nn(train_X_binary[:, 1])) - 1
