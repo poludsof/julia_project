@@ -7,7 +7,7 @@ function adversarial(nn::Chain, input::AbstractVector{<:Integer}, output, fix_in
 		set_silent(mathopt_model)
 	end
 
-	ivars = @variable(mathopt_model, [1:length(input)], Bin) # our z vector
+	ivars = @variable(mathopt_model, [1:length(input)], Bin) # z vector
 	ovars = setup_layer!(mathopt_model, nn, ivars) 
 
 	for i in fix_inputs

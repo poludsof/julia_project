@@ -66,14 +66,14 @@ function dfs_cache_non_recursive(sm::Subset_minimal, given_input_set::SBitSet{N,
         push!(visited_local, current_set) # mark the current subset as visited
 
         # samplovani
-        if length(current_set) <= 760
-            @timeit to "random" adv_founded = check_random_sets(sm, current_set)
-            println("Random search result: ", adv_founded)
-            if adv_founded
-                # println("Random set FOUND")
-                continue
-            end
-        end
+        # if length(current_set) <= 760
+        #     @timeit to "random" adv_founded = check_random_sets(sm, current_set)
+        #     println("Random search result: ", adv_founded)
+        #     if adv_founded
+        #         # println("Random set FOUND")
+        #         continue
+        #     end
+        # end
 
         # if length(current_set) <= 710  # too long
         #     break
@@ -166,7 +166,7 @@ function minimal_set_search(sm::Subset_minimal)
     input_set = SBitSet{32, UInt32}(given_input_set)
     
     # result = dfs_cache(sm, given_input_set, 0, 100, false)
-    # result = dfs_cache_non_recursive(sm, input_set, 100)
+    result = dfs_cache_non_recursive(sm, input_set, 10000)
     # result = dfs(sm.nn, given_input_set, 1, sm.input, sm.output)
     # result = tmp_backward(sm, input_set)
     return result

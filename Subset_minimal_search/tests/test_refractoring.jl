@@ -1,14 +1,20 @@
 
 ``` Test refactoring of the code ```
-using Subset_minimal_search: make_forward_search_sdp, compute_sdp_fwd, Subset_minimal, forward_search
+# using Subset_minimal_search: make_forward_search_sdp, compute_sdp_fwd, Subset_minimal, forward_search
 
-""" Prepare model and data """
 # using Subset_minimal_search
 # using Subset_minimal_search: preprocess_binary, preprocess_bin_neg, onehot_labels, accuracy
 
+""" Usual nn """
 model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
 model = deserialize(model_path)
 
+""" nn for MILP search """
+nn = Chain(Dense(28^2, 28, relu), Dense(28,28,relu), Dense(28,10)) 
+model = train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
+
+
+""" Prepare data """
 train_X, train_y = MNIST(split=:train)[:]
 test_X, test_y = MNIST(split=:test)[:]
 
@@ -29,13 +35,10 @@ sm = Subset_minimal(model, xₛ, yₛ)
 
 
 """ Test backward search """
-
+backward_search_sdp = make_backward_search_sdp(sm)
+solution = backward_search_sdp(max_steps=1000, sdp_threshold=0.9, num_samples=100)
 
 """ Test forward search """
-# solutions, reason = forward_search(model, xₛ, yₛ, max_steps=30, sdp_threshold=0.5, num_samples=100)
-# println("Solutions: ", solutions)
-# println("Reason: ", reason)
-
-# using closure:
 forward_search_sdp = make_forward_search_sdp(sm)
-solution = forward_search_sdp(max_steps=50, sdp_threshold=0.5, num_samples=1000)
+solution = forward_search_sdp(max_steps=5000, sdp_threshold=0.5, num_samples=100)
+

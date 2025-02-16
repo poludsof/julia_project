@@ -4,19 +4,19 @@ Forward search with priority queue based on sdp criterion value for minimal subs
 
 function make_forward_search_sdp(sm::Subset_minimal)
     expand! = make_expand!(sm)
-    choose_best_solution = make_choose_best_solution(sm)
 
     function forward_search_sdp(; max_steps::Int=1000, sdp_threshold::Float64=0.90, num_samples=1000)
         open_list = PriorityQueue{SBitSet{32, UInt32}, Float64}()
         close_list = Set{SBitSet{32, UInt32}}()
-        solutions = Set{SBitSet{32, UInt32}}()
+        min_solution = nothing
 
         expand!(open_list, close_list, SBitSet{32, UInt32}(), num_samples)
 
         steps = 0
         while !isempty(open_list)
             steps += 1
-            if steps > max_steps && !isempty(solutions)
+            if steps > max_steps && !isempty(min_solution)
+                println("Max steps reached ", steps)
                 break
             end
 
@@ -25,18 +25,20 @@ function make_forward_search_sdp(sm::Subset_minimal)
             current_subset = dequeue!(open_list)
 
             if sdp_value ≥ sdp_threshold
-                println("Solution found: ", current_subset, " sdp_value: ", sdp_value)
-                push!(solutions, current_subset)
+                # println("Solution found: ", current_subset, " sdp_value: ", sdp_value)
+                if min_solution === nothing || length(current_subset) < length(min_solution)
+                    min_solution = current_subset
+                    println("length of min solution: ", length(min_solution), " sdp_value: ", sdp_value)
+                end
             else
-                println("Expanding current_subset: ", current_subset)
+                # println("Expanding current_subset: ", current_subset, " sdp_value: ", sdp_value)
                 expand!(open_list, close_list, current_subset, num_samples)
             end
 
             push!(close_list, current_subset)
         end
 
-        # reason = steps > max_steps ? :iter_limit : :exhausted
-        return choose_best_solution(solutions, num_samples)
+        return min_solution
     end
     return forward_search_sdp
 end
@@ -56,23 +58,8 @@ function make_expand!(sm::Subset_minimal)
             if !haskey(open_list, new_subset)
                 enqueue!(open_list, new_subset, -sdp_value)
             end
+
         end
     end
     return expand!
-end
-
-function make_choose_best_solution(sm::Subset_minimal)
-    function choose_best_solution(solutions, num_samples)
-        best_solution = []
-        best_sdp_value = -Inf
-        for solution in solutions
-            sdp_value = compute_sdp_fwd(sm.nn, sm.input, solution, num_samples)
-            if sdp_value > best_sdp_value
-                best_sdp_value = sdp_value
-                best_solution = solution
-            end
-        end
-        return best_solution, best_sdp_value
-    end
-    return choose_best_solution
 end
