@@ -86,5 +86,3 @@ for k in 1:K
     # generated_image = generate_sample(θ, k)
     # plot_mnist_image(generated_image)
 end
-
-# trying to do commit

@@ -42,6 +42,9 @@ include("full_fwd_search.jl")
 # include("neural_network_visualization.jl")
 include("subset_search_exmpl.jl")
 
+include("criterium.jl")
+include("forward.jl")
+
 
 
 end

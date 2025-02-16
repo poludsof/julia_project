@@ -1,16 +1,4 @@
-@inline function sample_input(img::AbstractVector, ii::SBitSet, num_samples::Integer)
-    ii = collect(ii)
-    x = similar(img, length(img), num_samples)
-    @inbounds for col in axes(x, 2)
-        for i in axes(x, 1)
-            x[i, col] = 2*rand(Bool) - 1
-        end
-        for i in ii
-            x[i, col] = img[i]
-        end
-    end
-    x
-end
+
 
 function h_vals(model, xp, (I3, I2, I1), num_samples)
     (sdp_full(model, xp, I3, num_samples),
