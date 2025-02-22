@@ -70,7 +70,7 @@ function make_beam_search(sm::Subset_minimal)
         end
         print_sets(best_sets)
 
-        return best_sets[1][1] # Return the best subset found
+        return best_sets
     end
 
     return beam_search!

@@ -12,13 +12,6 @@
     x
 end
 
-function compute_sdp_fwd(model, img, ii, num_samples)
-    ii = collect(ii)
-    x = rand([-1,1], length(img), num_samples)
-    x[ii,:] .= img[ii]
-    mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
-end
-
 
 function calculate_ep(sm::Subset_minimal, fix_inputs::SBitSet, num_samples::Int)
     x = sample_input(sm.input, fix_inputs, num_samples)
@@ -27,7 +20,7 @@ end
 
 function calculate_sdp(sm::Subset_minimal, fix_inputs::SBitSet{N,T}, num_samples::Int) where {N, T}
     x = sample_input(sm.input, fix_inputs, num_samples)
-    mean(Flux.onecold(nn(x)) .== sm.output + 1)
+    mean(Flux.onecold(sm.nn(x)) .== sm.output + 1)
 end
 
 
