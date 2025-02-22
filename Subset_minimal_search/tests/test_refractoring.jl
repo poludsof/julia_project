@@ -34,11 +34,24 @@ yₛ = argmax(train_y[:, 1]) - 1
 sm = Subset_minimal(model, xₛ, yₛ)
 
 
-""" Test backward search """
+""" Prepare functions """
 backward_search_sdp = make_backward_search_sdp(sm)
+forward_search_sdp = make_forward_search_sdp(sm)
+beam_search! = make_beam_search(sm)
+
+
+""" Test backward search """
 solution = backward_search_sdp(max_steps=1000, sdp_threshold=0.9, num_samples=100)
 
 """ Test forward search """
-forward_search_sdp = make_forward_search_sdp(sm)
 solution = forward_search_sdp(max_steps=5000, sdp_threshold=0.5, num_samples=100)
 
+""" Test beam search """
+solution = beam_search!(calculate_ep; threshold=0.5, beam_size=5, num_samples=100)
+
+
+
+#! todo
+#? forward and backward greedy search
+#? forward and backward sdp/ep choice
+#? criterium structure
