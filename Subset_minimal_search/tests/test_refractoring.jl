@@ -38,13 +38,15 @@ sm = Subset_minimal(model, xₛ, yₛ)
 backward_search! = make_backward_search(sm)
 forward_search! = make_forward_search(sm)
 beam_search! = make_beam_search(sm)
+calc_sdp = make_calculate_sdp(sm)
+calc_ep = make_calculate_ep(sm)
 
 
 """ Test backward search """
-solution = backward_search!(calculate_sdp; max_steps=100, threshold=0.5, num_samples=100)
+solution = backward_search!(calc_sdp; max_steps=100, threshold=0.5, num_samples=100)
 
 """ Test forward search """
-solution = forward_search!(calculate_sdp; max_steps=50, threshold=0.5, num_samples=100)
+solution = forward_search!(calc_ep; max_steps=50, threshold=0.5, num_samples=100)
 
 """ Test beam search """
 solutions = beam_search!(calculate_ep; threshold=0.5, beam_size=5, num_samples=100)
@@ -53,5 +55,4 @@ solutions = beam_search!(calculate_ep; threshold=0.5, beam_size=5, num_samples=1
 
 #! todo
 #? forward and backward greedy search
-#? forward and backward sdp/ep choice
-#? criterium structure 
+#? criterium structure

@@ -11,7 +11,7 @@ function make_backward_search(sm::Subset_minimal)
         min_solution = nothing
 
         full_subset = SBitSet{32, UInt32}(collect(1:length(sm.input)))
-        initial_score = calc_func(sm, full_subset, num_samples)
+        initial_score = calc_func(full_subset, num_samples)
         enqueue!(open_list, full_subset, -initial_score)
 
         steps = 0
@@ -53,7 +53,7 @@ function make_expand_backward!(sm::Subset_minimal)
                 continue
             end
 
-            score = calc_func(sm, new_subset, num_samples)
+            score = calc_func(new_subset, num_samples)
             if !haskey(open_list, new_subset)
                 enqueue!(open_list, new_subset, -score)
             end

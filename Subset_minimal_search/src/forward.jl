@@ -53,7 +53,7 @@ function make_expand!(sm::Subset_minimal)
             if new_subset ∈ close_list
                 continue
             end
-            score = calc_func(sm, new_subset, num_samples)
+            score = calc_func(new_subset, num_samples)
 
             if !haskey(open_list, new_subset)
                 enqueue!(open_list, new_subset, -score)
