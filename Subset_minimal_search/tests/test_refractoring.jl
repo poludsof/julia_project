@@ -10,8 +10,8 @@ model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
 model = deserialize(model_path)
 
 """ nn for MILP search """
-nn = Chain(Dense(28^2, 28, relu), Dense(28,28,relu), Dense(28,10)) 
-model = train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
+# nn = Chain(Dense(28^2, 28, relu), Dense(28,28,relu), Dense(28,10)) 
+# model = train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
 
 
 """ Prepare data """
@@ -43,16 +43,18 @@ calc_ep = make_calculate_ep(sm)
 
 
 """ Test backward search """
-solution = backward_search!(calc_sdp; max_steps=100, threshold=0.5, num_samples=100)
+solution = backward_search!(calc_sdp; max_steps=10, threshold=0.5, num_samples=100)
 
 """ Test forward search """
 solution = forward_search!(calc_ep; max_steps=50, threshold=0.5, num_samples=100)
 
-""" Test beam search """
-solutions = beam_search!(calculate_ep; threshold=0.5, beam_size=5, num_samples=100)
+""" Test beam search, returns the beam_size number of subsets"""
+solutions = beam_search!(calc_ep; threshold=0.5, beam_size=5, num_samples=100)
 
 
+println(solution)
 
 #! todo
 #? forward and backward greedy search
 #? criterium structure
+#? refactoring of the full search

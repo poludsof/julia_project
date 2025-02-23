@@ -1,12 +1,16 @@
+forward_search_I3 = make_forward_search(sm)
+
+sm_I2 = Subset_minimal(sm.nn[2:3], sm.nn[1](sm.input), sm.output)
+forward_search_I2 = make_forward_search(sm_I2)
+
+sm_I1 = Subset_minimal(sm.nn[3], sm.nn[1:2](sm.input), sm.output)
+forward_search_I1 = make_forward_search(sm_I1)
 
 
 function full_forward_search(sm::Subset_minimal, threshold=0.9, num_samples=100)
-    all_I3, reas = forward_search(sm.nn, sm.input, sm.output, max_steps=30, sdp_threshold=0.5, num_samples=num_samples)
-    all_I2, reas = forward_search(sm.nn[2:3], sm.nn[1](sm.input), sm.output, max_steps=30, sdp_threshold=0.5, num_samples=num_samples)
-    all_I1, reas = forward_search(sm.nn[3], sm.nn[1:2](sm.input), sm.output, max_steps=30, sdp_threshold=0.5, num_samples=num_samples)
-    I3, sdp_I3 = choose_best_solution(all_I3, sm.nn, sm.input, num_samples)
-    I2, sdp_I2 = choose_best_solution(all_I2, sm.nn[2:3], sm.nn[1](sm.input), num_samples)
-    I1, sdp_I1 = choose_best_solution(all_I1, sm.nn[3], sm.nn[1:2](sm.input), num_samples)
+    I3 = forward_search_I3(calc_ep; max_steps=50, threshold=0.5, num_samples=num_samples)
+    I2 = forward_search_I2(calc_ep; max_steps=50, threshold=0.5, num_samples=num_samples)
+    I1 = forward_search_I1(calc_ep; max_steps=50, threshold=0.5, num_samples=num_samples)
     full_error = heuristic(sm.nn, sm.input, (I3, I2, I1))
 
     println("I3: ", I3)

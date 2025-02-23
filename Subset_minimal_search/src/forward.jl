@@ -44,6 +44,7 @@ function make_forward_search(sm::Subset_minimal)
 end
 
 
+""" Expand the current subset by adding one(best) feature at a time """
 function make_expand!(sm::Subset_minimal)
     function expand!(calc_func::Function, open_list::PriorityQueue{SBitSet{N, T}, Float64}, close_list::Set{SBitSet{N, T}}, subset::SBitSet{N, T}, num_samples) where {N, T}
         remaining_features = setdiff(1:size(sm.input, 1), subset)

@@ -1,18 +1,4 @@
 
-function preprocess_binary(X, threshold=0.5)
-    binary_X = Float32.(X) .>= threshold
-    return reshape(binary_X, 28 * 28, size(binary_X, 3))
-end
-
-function preprocess_bin_neg(data)
-    bin_data_neg = 2 .* data .- 1
-    return bin_data_neg
-end
-
-function onehot_labels(y)
-    return Flux.onehotbatch(y, 0:9)
-end
-
 function smoothed_crossentropy(pred, target, epsilon=0.1)
     num_classes = size(target, 1)
     smooth_target = (1 - epsilon) * target .+ epsilon / num_classes

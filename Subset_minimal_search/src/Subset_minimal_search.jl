@@ -34,16 +34,14 @@ include("mnist_training.jl")
 include("plots.jl")
 include("backward_search.jl")
 include("milp.jl")
-include("beam_search.jl")
 include("full_search.jl")
 include("full_fwd_search.jl")
-# include("neural_network_visualization.jl")
 # include("subset_search_exmpl.jl")
 
 include("criterium.jl")
 include("forward.jl")
 include("backward.jl")
 include("beam.jl")
-
+include("dataset_prep.jl")
 
 end

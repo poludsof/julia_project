@@ -11,7 +11,7 @@ function make_search_best_subsets(sm::Subset_minimal)
 
             # Create a new subset by adding the current feature
             new_set = union(fix_inputs, SBitSet{32, UInt32}(i))
-            score = calc_func(sm, new_set, num_samples) # Compute the score for the subset (ep/sdp)
+            score = calc_func(new_set, num_samples) # Compute the score for the subset (ep/sdp)
 
             if score >= worst_threshold
                 push!(best_results, (new_set, score))
