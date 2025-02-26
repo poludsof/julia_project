@@ -32,6 +32,18 @@ sm = Subset_minimal(model, xₛ, yₛ)
 
 
 
+heuristic(ii) = uniform_heuristic(sm, ii, 1000)
+
+
+for heuristic in (ii -> uniform_heuristic(sm, ii, 1000), )
+	for criterium in (ii -> criterium_ep(sm, ii, 1000), ii-> criterium_sdp(sm, ii, 1000))
+		forward_search(sm, constraint, heuristic; max_steps::Int=1000)
+		backward_search(sm, constraint, heuristic; max_steps::Int=1000)
+		beam_search(sm, constraint, heuristic; max_steps::Int=1000)
+	end
+end
+
+
 """ Prepare functions """
 backward_search! = make_backward_search(sm)
 forward_search! = make_forward_search(sm)

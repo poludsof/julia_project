@@ -1,3 +1,29 @@
+# Pevnak's version
+"""
+    function adversarial_rate_uniform(model, x, ii, num_samples)
+
+    Assuming model returns true / false
+
+    intended use: ii -> adversarial_rate_uniform(model, x, y, ii, num_samples)
+"""
+function uniform_heuristic(sm::Subset_minimal, ii, num_samples)
+    xx = sample_input(sm.input, ii, num_samples)
+    mean(Flux.onecold(sm.nn(xx) .== sm.output))
+end
+
+function datadistribution_heuristic(sm::Subset_minimal, ii, data_model, num_samples)
+    xx = sample_input(data_model, sm.input, ii, num_samples)
+    mean(Flux.onecold(sm.nn(xx) .== sm.output))
+end
+
+function mi_heuristic(sm::Subset_minimal, ii, num_samples)
+    xx = sample_input(sm.inputx, ii, num_samples)
+    mean(Flux.onecold(sm.nn(xx) .== sm.output))
+end
+
+
+
+
 function make_h_vals(sm::Subset_minimal)
     return function((I3, I2, I1), num_samples)
         (sdp_full(sm.nn, sm.input, I3, num_samples),
