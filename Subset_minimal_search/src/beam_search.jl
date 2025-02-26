@@ -45,9 +45,7 @@ function make_expand_the_best_subsets(sm::Subset_minimal)
     return expand_the_best_subsets
 end
 
-# scoring_func:
-# 1)calculate_ep
-# 2)calculate_sdp
+
 function make_beam_search(sm::Subset_minimal)
     expand_the_best_subsets = make_expand_the_best_subsets(sm)
     search_best_subsets = make_search_best_subsets(sm)
@@ -75,7 +73,6 @@ function make_beam_search(sm::Subset_minimal)
 
     return beam_search!
 end
-
 
 
 

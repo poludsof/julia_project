@@ -1,9 +1,6 @@
 
 ``` Test refactoring of the code ```
-# using Subset_minimal_search: make_forward_search_sdp, compute_sdp_fwd, Subset_minimal, forward_search
 
-# using Subset_minimal_search
-# using Subset_minimal_search: preprocess_binary, preprocess_bin_neg, onehot_labels, accuracy
 
 """ Usual nn """
 model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
@@ -34,12 +31,18 @@ yₛ = argmax(train_y[:, 1]) - 1
 sm = Subset_minimal(model, xₛ, yₛ)
 
 
+
 """ Prepare functions """
 backward_search! = make_backward_search(sm)
 forward_search! = make_forward_search(sm)
 beam_search! = make_beam_search(sm)
 calc_sdp = make_calculate_sdp(sm)
 calc_ep = make_calculate_ep(sm)
+
+greedy_subsets_search! = make_greedy_subsets_search(sm)
+forward_priority_search! = make_forward_priority_search(sm)
+backward_priority_reduction! = make_backward_priority_reduction(sm)
+
 
 
 """ Test backward search """
@@ -51,10 +54,24 @@ solution = forward_search!(calc_ep; max_steps=50, threshold=0.5, num_samples=100
 """ Test beam search, returns the beam_size number of subsets"""
 solutions = beam_search!(calc_ep; threshold=0.5, beam_size=5, num_samples=100)
 
-
 println(solution)
 
+
+
+""" Test full search"""
+# Greedy approach
+best_set = greedy_subsets_search!(threshold_total_err=0.5, num_samples=100)
+# Or forward priority search
+best_set = forward_priority_search!(threshold_total_err=0.5, num_samples=100)
+
+# Backward search search to reduce subsets
+reduced_sets = backward_priority_reduction!(best_set, threshold=0.5, num_samples=100)
+
+# Search for subsets implicating indices of 2nd and 3rd layers
+I3, I2, I1 = reduced_sets
+subsubset_I2 = implicative_subsets(sm.nn[1], sm.input, I3, I2, threshold=0.5, num_samples=100)
+subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, threshold=0.5, num_samples=100)
+
+
 #! todo
-#? forward and backward greedy search
-#? criterium structure
-#? refactoring of the full search
+#? forward and backward greedy search + dfs/bfs

@@ -1,24 +1,3 @@
-# @inline function sample_input(img::AbstractVector, ii::SBitSet, num_samples::Integer)
-#     ii = collect(ii)
-#     x = similar(img, length(img), num_samples)
-#     @inbounds for col in axes(x, 2)
-#         for i in axes(x, 1)
-#             x[i, col] = 2*rand(Bool) - 1
-#         end
-#         for i in ii
-#             x[i, col] = img[i]
-#         end
-#     end
-#     x
-# end
-
-# function sdp_partial(model, img, ii, jj, num_samples)
-#     isempty(jj) && return(1.0)
-#     isempty(ii) && return(0.0)
-#     jj = collect(jj)
-#     x = sample_input(img, ii, num_samples)
-#     mean(model(x)[jj, :] .== model(img)[jj, :])
-# end
 
 function backward_for_index(model, xp, ii, index, threshold, num_samples)
 
@@ -66,7 +45,7 @@ function backward_for_index(model, xp, ii, index, threshold, num_samples)
 end
 
 
-function implicative_subsets(model, xp, prev_layer_I, layer_I, threshold, num_samples)
+function implicative_subsets(model, xp, prev_layer_I, layer_I; threshold=0.9, num_samples=1000)
     subsets = []
     for i in layer_I
         subset_i = backward_for_index(model, xp, prev_layer_I, i, threshold, num_samples)
