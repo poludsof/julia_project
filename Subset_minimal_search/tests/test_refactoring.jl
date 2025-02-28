@@ -32,7 +32,7 @@ sm = Subset_minimal(model, xₛ, yₛ)
 
 
 
-""" Prepare functions """
+""" Prepare functions """  #! todo remove
 backward_search! = make_backward_search(sm)
 forward_search! = make_forward_search(sm)
 beam_search! = make_beam_search(sm)
@@ -75,3 +75,5 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 
 #! todo
 #? forward and backward greedy search + dfs/bfs
+#? remove closures
+
