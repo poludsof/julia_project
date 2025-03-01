@@ -86,7 +86,8 @@ function init_sbitset(n::Int)
 end
 
 I3 = init_sbitset(784)
-I2 = init_sbitset(256)
-I1 = init_sbitset(256)
+I2 = nothing
+I1 = nothing
 
 solution = forward_search_for_all(sm, (I3, I2, I1), threshold_total_err=0.5, num_samples=100)
+reduced_solution = backward_reduction_for_all(sm, solution, threshold=0.5, num_samples=100)
