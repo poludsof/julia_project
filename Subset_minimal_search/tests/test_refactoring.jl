@@ -46,13 +46,13 @@ backward_priority_reduction! = make_backward_priority_reduction(sm)
 
 
 """ Test backward search """
-solution = backward_search!(calc_sdp; max_steps=10, threshold=0.5, num_samples=100)
+solution = backward_search(sm, calculate_sdp; max_steps=10, threshold=0.5, num_samples=100)
 
 """ Test forward search """
-solution = forward_search!(calc_ep; max_steps=50, threshold=0.5, num_samples=100)
+solution = forward_search(sm, calculate_ep; max_steps=50, threshold=0.5, num_samples=100)
 
 """ Test beam search, returns the beam_size number of subsets"""
-solutions = beam_search!(calc_ep; threshold=0.5, beam_size=5, num_samples=100)
+solutions = beam_search(sm, calculate_ep; threshold=0.5, beam_size=5, num_samples=100)
 
 println(solution)
 
@@ -60,12 +60,12 @@ println(solution)
 
 """ Test full search"""
 # Greedy approach
-best_set = greedy_subsets_search!(threshold_total_err=0.5, num_samples=100)
+best_set = greedy_subsets_search(sm, threshold_total_err=0.5, num_samples=100)
 # Or forward priority search
-best_set = forward_priority_search!(threshold_total_err=0.5, num_samples=100)
+best_set = forward_priority_search(sm, threshold_total_err=0.5, num_samples=100)
 
 # Backward search search to reduce subsets
-reduced_sets = backward_priority_reduction!(best_set, threshold=0.5, num_samples=100)
+reduced_sets = backward_priority_reduction(sm, best_set, threshold=0.5, num_samples=100)
 
 # Search for subsets implicating indices of 2nd and 3rd layers
 I3, I2, I1 = reduced_sets
@@ -75,5 +75,4 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 
 #! todo
 #? forward and backward greedy search + dfs/bfs
-#? remove closures
 
