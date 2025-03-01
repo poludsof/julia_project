@@ -34,7 +34,7 @@ function forward_priority_search(sm::Subset_minimal; threshold_total_err=0.1, nu
     closed_list = Set{Tuple{SBitSet, SBitSet, SBitSet}}()
 
     steps = 0
-    max_steps = 100
+    # max_steps = 100
 
     while !isempty(stack)
 

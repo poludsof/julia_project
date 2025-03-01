@@ -24,11 +24,13 @@ function calculate_sdp(sm::Subset_minimal, fix_inputs::SBitSet, num_samples::Int
 end
 
 function sdp_full(model, img, ii, num_samples)
+    ii === nothing && return 1
     x = sample_input(img, ii, num_samples)
     mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
 end
 
 function sdp_partial(model, img, ii, jj, num_samples)
+    (jj === nothing || ii === nothing) && return 1
     isempty(jj) && return(1.0)
     isempty(ii) && return(0.0)
     jj = collect(jj)

@@ -66,25 +66,31 @@ end
 
 
 function expand_frwd(sm::Subset_minimal, stack, closed_list, (I3, I2, I1), confidence, num_samples)
-    for i in setdiff(1:784, I3)
-        new_subsets = (push(I3, i), I2, I1)
-        new_heuristic, new_error = heuristic(sm, new_subsets, confidence, num_samples)
-        if new_subsets ∉ closed_list
-            push!(stack, (new_heuristic, new_error, new_subsets))    
+    if I3 !== nothing
+        for i in setdiff(1:784, I3)
+            new_subsets = (push(I3, i), I2, I1)
+            new_heuristic, new_error = heuristic(sm, new_subsets, confidence, num_samples)
+            if new_subsets ∉ closed_list
+                push!(stack, (new_heuristic, new_error, new_subsets))    
+            end
         end
     end
-    for i in setdiff(1:256, I2)
-        new_subsets = (I3, push(I2, i), I1)
-        new_heuristic, new_error = heuristic(sm, new_subsets, confidence, num_samples)
-        if new_subsets ∉ closed_list
-            push!(stack, (new_heuristic, new_error, new_subsets))
+    if I2 !== nothing
+        for i in setdiff(1:256, I2)
+            new_subsets = (I3, push(I2, i), I1)
+            new_heuristic, new_error = heuristic(sm, new_subsets, confidence, num_samples)
+            if new_subsets ∉ closed_list
+                push!(stack, (new_heuristic, new_error, new_subsets))
+            end
         end
     end
-    for i in setdiff(1:256, I1)
-        new_subsets = (I3, I2, push(I1, i))
-        new_heuristic, new_error = heuristic(sm, new_subsets, confidence, num_samples)
-        if new_subsets ∉ closed_list
-            push!(stack, (new_heuristic, new_error, new_subsets))
+    if I1 !== nothing
+        for i in setdiff(1:256, I1)
+            new_subsets = (I3, I2, push(I1, i))
+            new_heuristic, new_error = heuristic(sm, new_subsets, confidence, num_samples)
+            if new_subsets ∉ closed_list
+                push!(stack, (new_heuristic, new_error, new_subsets))
+            end
         end
     end
     stack

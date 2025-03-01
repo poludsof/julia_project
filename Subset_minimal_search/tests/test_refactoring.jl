@@ -76,3 +76,17 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 #! todo
 #? forward and backward greedy search + dfs/bfs
 
+#! возможность выбора sdp\ep
+
+#! Attempt to write one search for all
+
+function init_sbitset(n::Int) 
+    N = ceil(Int, n / 64)
+    SBitSet{N, UInt64}()
+end
+
+I3 = init_sbitset(784)
+I2 = init_sbitset(256)
+I1 = init_sbitset(256)
+
+solution = forward_search_for_all(sm, (I3, I2, I1), threshold_total_err=0.5, num_samples=100)

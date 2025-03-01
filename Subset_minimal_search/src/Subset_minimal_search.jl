@@ -43,5 +43,6 @@ include("dataset_prep.jl")
 include("heuristic.jl")
 
 include("tmp_bcw.jl")
+include("one_search_for_all.jl")
 
 # end
