@@ -13,17 +13,24 @@
 end
 
 
-function calculate_ep(sm::Subset_minimal, fix_inputs::SBitSet, num_samples::Int)
-    x = sample_input(sm.input, fix_inputs, num_samples)
-    mean(Flux.softmax(sm.nn(x))[sm.output + 1, :])
+function ep(model, img, ii, num_samples)
+    ii === nothing && return 1
+    x = sample_input(img, ii, num_samples)
+    mean(Flux.softmax(model(x))[argmax(model(img)), :])
 end
 
-function calculate_sdp(sm::Subset_minimal, fix_inputs::SBitSet, num_samples::Int)
-    x = sample_input(sm.input, fix_inputs, num_samples)
-    mean(Flux.onecold(sm.nn(x)) .== sm.output + 1)
+#! todo, ep_partial doesn't work
+function ep_partial(model, img, ii, jj, num_samples)
+    (jj === nothing || ii === nothing) && return 1
+    isempty(jj) && return(1.0)
+    isempty(ii) && return(0.0)
+    jj = collect(jj)
+    x = sample_input(img, ii, num_samples)
+    # mean(Flux.softmax(model(x))[jj, :] .== Flux.softmax(model(img))[jj, :])
 end
 
-function sdp_full(model, img, ii, num_samples)
+
+function sdp(model, img, ii, num_samples)
     ii === nothing && return 1
     x = sample_input(img, ii, num_samples)
     mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))

@@ -31,28 +31,14 @@ yₛ = argmax(train_y[:, 1]) - 1
 sm = Subset_minimal(model, xₛ, yₛ)
 
 
-
-""" Prepare functions """  #! todo remove
-backward_search! = make_backward_search(sm)
-forward_search! = make_forward_search(sm)
-beam_search! = make_beam_search(sm)
-calc_sdp = make_calculate_sdp(sm)
-calc_ep = make_calculate_ep(sm)
-
-greedy_subsets_search! = make_greedy_subsets_search(sm)
-forward_priority_search! = make_forward_priority_search(sm)
-backward_priority_reduction! = make_backward_priority_reduction(sm)
-
-
-
 """ Test backward search """
-solution = backward_search(sm, calculate_sdp; max_steps=10, threshold=0.5, num_samples=100)
+solution = backward_search(sm, sdp; max_steps=10, threshold=0.5, num_samples=100)
 
 """ Test forward search """
-solution = forward_search(sm, calculate_ep; max_steps=50, threshold=0.5, num_samples=100)
+solution = forward_search(sm, sdp; max_steps=50, threshold=0.5, num_samples=100)
 
 """ Test beam search, returns the beam_size number of subsets"""
-solutions = beam_search(sm, calculate_ep; threshold=0.5, beam_size=5, num_samples=100)
+solutions = beam_search(sm, ep; threshold=0.5, beam_size=5, num_samples=100)
 
 println(solution)
 
@@ -76,9 +62,18 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 #! todo
 #? forward and backward greedy search + dfs/bfs
 
-#! возможность выбора sdp\ep
+#// sdp/ep choice
 
 #! Attempt to write one search for all
+
+#! ep_partial doesn't work
+
+#! beam/forward/backward search for all
+
+#! timeouts
+
+#! terminate on the first valid subset
+
 
 function init_sbitset(n::Int) 
     N = ceil(Int, n / 64)
@@ -89,5 +84,5 @@ I3 = init_sbitset(784)
 I2 = nothing
 I1 = nothing
 
-solution = forward_search_for_all(sm, (I3, I2, I1), threshold_total_err=0.5, num_samples=100)
-reduced_solution = backward_reduction_for_all(sm, solution, threshold=0.5, num_samples=100)
+solution = forward_search_for_all(sm, (I3, I2, I1), ep, ep_partial, threshold_total_err=0.5, num_samples=100)
+reduced_solution = backward_reduction_for_all(sm, solution, sdp, sdp_partial, threshold=0.5, num_samples=100)

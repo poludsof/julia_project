@@ -48,7 +48,7 @@ function expand!(sm, calc_func::Function, open_list::PriorityQueue{SBitSet{N, T}
         if new_subset ∈ close_list
             continue
         end
-        score = calc_func(sm, new_subset, num_samples)
+        score = calc_func(sm.nn, sm.input, new_subset, num_samples)
 
         if !haskey(open_list, new_subset)
             enqueue!(open_list, new_subset, -score)

@@ -4,10 +4,10 @@ function init_sbitset(n::Int)
     SBitSet{N, UInt64}()
 end
 
-function forward_search_for_all(sm::Subset_minimal, (I3, I2, I1); threshold_total_err=0.1, num_samples=100)
+function forward_search_for_all(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold_total_err=0.1, num_samples=100)
     confidence = 1 - threshold_total_err
     
-    initial_heuristic, full_error = heuristic(sm, (I3, I2, I1), confidence, num_samples)
+    initial_heuristic, full_error = heuristic(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
     println("Initial error: ", full_error, " Initial heuristic: ", initial_heuristic)
 
     stack = [(initial_heuristic, full_error, (I3, I2, I1))]
@@ -34,7 +34,7 @@ function forward_search_for_all(sm::Subset_minimal, (I3, I2, I1); threshold_tota
 
         println("step: $steps, length $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) Expanding state with error: $current_error, heuristic: $current_heuristic")
 
-        stack = expand_frwd(sm, stack, closed_list, (I3, I2, I1), confidence, num_samples)
+        stack = expand_frwd(sm, calc_func, calc_func_partial, stack, closed_list, (I3, I2, I1), confidence, num_samples)
     end
 
     println("Stack is empty")
@@ -42,9 +42,9 @@ function forward_search_for_all(sm::Subset_minimal, (I3, I2, I1); threshold_tota
 end
 
 # Priority on the length of subsets
-function backward_reduction_for_all(sm::Subset_minimal, (I3, I2, I1); threshold=0.9, num_samples=100)    
+function backward_reduction_for_all(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; calc_func=sdp, calc_func_partial=sdp_partial, threshold=0.9, num_samples=100)    
     confidence = 1 - threshold
-    initial_total_err = max_error(sm, (I3, I2, I1), confidence, num_samples)
+    initial_total_err = max_error(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
     println("Initial max error: ", initial_total_err)
 
     stack = [(initial_total_err, (I3, I2, I1))]
@@ -81,7 +81,7 @@ function backward_reduction_for_all(sm::Subset_minimal, (I3, I2, I1); threshold=
             best_total_len = total_len
         end
         
-        stack = expand_bcwd(sm, stack, closed_list, current_subsets, initial_total_err, confidence, num_samples)
+        stack = expand_bcwd(sm, calc_func, calc_func_partial, stack, closed_list, current_subsets, initial_total_err, confidence, num_samples)
 
     end
     I3, I2, I1 = best_subsets
