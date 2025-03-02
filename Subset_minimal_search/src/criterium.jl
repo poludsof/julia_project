@@ -1,3 +1,4 @@
+
 @inline function sample_input(img::AbstractVector, ii::SBitSet, num_samples::Integer)
     ii = collect(ii)
     x = similar(img, length(img), num_samples)
@@ -13,22 +14,12 @@
 end
 
 
+""" SDP and EP criteria for evaluating subset(ii) robustness """
 function ep(model, img, ii, num_samples)
     ii === nothing && return 1
     x = sample_input(img, ii, num_samples)
     mean(Flux.softmax(model(x))[argmax(model(img)), :])
 end
-
-#! todo, ep_partial doesn't work
-function ep_partial(model, img, ii, jj, num_samples)
-    (jj === nothing || ii === nothing) && return 1
-    isempty(jj) && return(1.0)
-    isempty(ii) && return(0.0)
-    jj = collect(jj)
-    x = sample_input(img, ii, num_samples)
-    # mean(Flux.softmax(model(x))[jj, :] .== Flux.softmax(model(img))[jj, :])
-end
-
 
 function sdp(model, img, ii, num_samples)
     ii === nothing && return 1
@@ -36,6 +27,9 @@ function sdp(model, img, ii, num_samples)
     mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
 end
 
+
+
+""" Partial SDP and EP criteria for evaluating the implication score of a subset of one layer(ii) on another layer(jj) """
 function sdp_partial(model, img, ii, jj, num_samples)
     (jj === nothing || ii === nothing) && return 1
     isempty(jj) && return(1.0)
@@ -43,4 +37,14 @@ function sdp_partial(model, img, ii, jj, num_samples)
     jj = collect(jj)
     x = sample_input(img, ii, num_samples)
     mean(model(x)[jj, :] .== model(img)[jj, :])
+end
+
+# TODO ep_partial doesn't work
+function ep_partial(model, img, ii, jj, num_samples)
+    (jj === nothing || ii === nothing) && return 1
+    isempty(jj) && return(1.0)
+    isempty(ii) && return(0.0)
+    jj = collect(jj)
+    x = sample_input(img, ii, num_samples)
+    # mean(Flux.softmax(model(x))[jj, :] .== Flux.softmax(model(img))[jj, :])
 end

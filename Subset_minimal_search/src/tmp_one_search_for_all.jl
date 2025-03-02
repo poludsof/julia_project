@@ -41,8 +41,8 @@ function forward_search_for_all(sm::Subset_minimal, (I3, I2, I1), calc_func::Fun
     return array_of_the_best
 end
 
-# Priority on the length of subsets
-function backward_reduction_for_all(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; calc_func=sdp, calc_func_partial=sdp_partial, threshold=0.9, num_samples=100)    
+# Priority on the length of subsets, finish when max_steps is reached or stack is empty
+function backward_reduction_for_all(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold=0.1, max_steps=1000, num_samples=100)    
     confidence = 1 - threshold
     initial_total_err = max_error(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
     println("Initial max error: ", initial_total_err)
@@ -55,7 +55,6 @@ function backward_reduction_for_all(sm::Subset_minimal, (I3, I2, I1), calc_func:
                      (I2 !== nothing ? length(I2) : 0) +
                      (I1 !== nothing ? length(I1) : 0)
 
-    max_steps = 300
     steps = 0
 
     while !isempty(stack)

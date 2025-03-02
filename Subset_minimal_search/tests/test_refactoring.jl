@@ -31,58 +31,63 @@ yₛ = argmax(train_y[:, 1]) - 1
 sm = Subset_minimal(model, xₛ, yₛ)
 
 
-""" Test backward search """
-solution = backward_search(sm, sdp; max_steps=10, threshold=0.5, num_samples=100)
+function init_sbitset(n::Int) 
+    N = ceil(Int, n / 64)
+    SBitSet{N, UInt64}()
+end
 
-""" Test forward search """
-solution = forward_search(sm, sdp; max_steps=50, threshold=0.5, num_samples=100)
 
-""" Test beam search, returns the beam_size number of subsets"""
-solutions = beam_search(sm, ep; threshold=0.5, beam_size=5, num_samples=100)
 
-println(solution)
+
+""" Test one subset(layer) backward/forward/beam search """
+# threshold denotes the required precision of the subset
+solution_subset = one_subset_forward_search(sm, sdp; max_steps=50, threshold=0.5, num_samples=100)
+solution_subset = one_subset_backward_search(sm, sdp; max_steps=50, threshold=0.5, num_samples=100)
+solution_beam_subsets = beam_search(sm, ep; threshold=0.5, beam_size=5, num_samples=100)
+
+
+
+
+""" Test search functions that fit one and all subsets"""
+# threshold denotes allowed error of the subset
+
+#1. Initialize starting subsets
+I3, I2, I1 = (init_sbitset(784), init_sbitset(256), init_sbitset(256))
+#2. Search
+solution_subsets = forward_search(sm, (I3, I2, I1), sdp, sdp_partial; threshold_total_err=0.5, num_samples=100)
+#3. Backward search or refining subsets
+reduced_solution = backward_search_length_priority(sm, solution_subsets, sdp, sdp_partial; threshold=0.5, max_steps=500, num_samples=100)
+
+println(reduced_solution)
+
 
 
 
 """ Test full search"""
 # Greedy approach
 best_set = greedy_subsets_search(sm, threshold_total_err=0.5, num_samples=100)
-# Or forward priority search
-best_set = forward_priority_search(sm, threshold_total_err=0.5, num_samples=100)
 
-# Backward search search to reduce subsets
-reduced_sets = backward_priority_reduction(sm, best_set, threshold=0.5, num_samples=100)
 
 # Search for subsets implicating indices of 2nd and 3rd layers
-I3, I2, I1 = reduced_sets
+I3, I2, I1 = reduced_solution
 subsubset_I2 = implicative_subsets(sm.nn[1], sm.input, I3, I2, threshold=0.5, num_samples=100)
 subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, threshold=0.5, num_samples=100)
 
 
 #! todo
 #? forward and backward greedy search + dfs/bfs
-
+#! milp choice (heuristic + criterium)
 #// sdp/ep choice
-
-#! Attempt to write one search for all
-
+#// Attempt to write one search for all
 #! ep_partial doesn't work
-
-#! beam/forward/backward search for all
-
+#! beam search for all
 #! timeouts
-
 #! terminate on the first valid subset
+#// threshold of the error
+#! implicative_subsets
 
 
-function init_sbitset(n::Int) 
-    N = ceil(Int, n / 64)
-    SBitSet{N, UInt64}()
-end
 
-I3 = init_sbitset(784)
-I2 = nothing
-I1 = nothing
 
 solution = forward_search_for_all(sm, (I3, I2, I1), ep, ep_partial, threshold_total_err=0.5, num_samples=100)
-reduced_solution = backward_reduction_for_all(sm, solution, sdp, sdp_partial, threshold=0.5, num_samples=100)
+reduced_solution = backward_reduction_for_all(sm, solution, sdp, sdp_partial, threshold=0.5, max_steps=100, num_samples=100)

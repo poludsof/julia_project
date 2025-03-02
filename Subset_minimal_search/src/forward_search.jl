@@ -1,8 +1,7 @@
 """
 Forward search with priority queue based on criterion value for minimal subset search for the FiRST layer of a neural network.
 """
-
-function forward_search(sm::Subset_minimal, calc_func::Function; max_steps::Int=1000, threshold::Float64=0.90, num_samples=1000)
+function one_subset_forward_search(sm::Subset_minimal, calc_func::Function; max_steps::Int=1000, threshold::Float64=0.90, num_samples=1000)
     open_list = PriorityQueue{SBitSet{32, UInt32}, Float64}()
     close_list = Set{SBitSet{32, UInt32}}()
     min_solution = nothing
@@ -55,4 +54,43 @@ function expand!(sm, calc_func::Function, open_list::PriorityQueue{SBitSet{N, T}
         end
 
     end
+end
+
+
+
+function forward_search(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold_total_err=0.1, num_samples=100)
+    confidence = 1 - threshold_total_err
+    
+    initial_heuristic, full_error = heuristic(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
+    println("Initial error: ", full_error, " Initial heuristic: ", initial_heuristic)
+
+    stack = [(initial_heuristic, full_error, (I3, I2, I1))]
+    array_of_the_best = []
+    closed_list = Set{Tuple{typeof(I3), typeof(I2), typeof(I1)}}()
+
+    steps = 0
+    # max_steps = 100
+
+    while !isempty(stack)
+
+        # steps > max_steps && break
+        steps += 1
+
+        sort!(stack, by = x -> -x[1])
+        current_heuristic, current_error, (I3, I2, I1) = pop!(stack)
+        closed_list = push!(closed_list, (I3, I2, I1))
+        
+        if current_error <= 0
+            push!(array_of_the_best, (I3, I2, I1))
+            println("Valid subset found: $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) with error: ", current_error)
+            return (I3, I2, I1)
+        end
+
+        println("step: $steps, length $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) Expanding state with error: $current_error, heuristic: $current_heuristic")
+
+        stack = expand_frwd(sm, calc_func, calc_func_partial, stack, closed_list, (I3, I2, I1), confidence, num_samples)
+    end
+
+    println("Stack is empty")
+    return array_of_the_best
 end

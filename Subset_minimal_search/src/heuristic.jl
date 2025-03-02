@@ -1,3 +1,4 @@
+
 function h_vals(sm::Subset_minimal, calc_func::Function, calc_func_partial::Function, (I3, I2, I1), num_samples)
     (calc_func(sm.nn, sm.input, I3, num_samples),
     calc_func(sm.nn[2:3], sm.nn[1](sm.input), I2, num_samples),
