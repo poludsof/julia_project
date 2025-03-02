@@ -86,7 +86,9 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 #// threshold of the error
 #! implicative_subsets
 
-
+#* BEAM SEARCH сортировка по максимальной ошибке, сначала рассмотреть все расширения в одной греппе подмножеств, сортировка по всем группам
+#* 3 марта - добавить timeout
+#* 4 марта - добавить milp choice
 
 
 solution = forward_search_for_all(sm, (I3, I2, I1), ep, ep_partial, threshold_total_err=0.5, num_samples=100)
