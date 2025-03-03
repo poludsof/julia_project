@@ -56,7 +56,7 @@ function expand_backward(sm::Subset_minimal, calc_func::Function, open_list::Pri
 end
 
 
-function backward_search_length_priority(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold=0.1, max_steps=1000, num_samples=100)    
+function backward_search_length_priority(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold=0.1, max_steps=1000, num_samples=100, time_limit=60)    
     confidence = 1 - threshold
     initial_total_err = max_error(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
     println("Initial max error: ", initial_total_err)
@@ -70,10 +70,16 @@ function backward_search_length_priority(sm::Subset_minimal, (I3, I2, I1), calc_
                      (I1 !== nothing ? length(I1) : 0)
 
     steps = 0
+    start_time = time()
 
-    while !isempty(stack)
+    @timeit to "backward(length) search" while !isempty(stack)
         steps += 1
         steps > max_steps && break
+
+        if time() - start_time > time_limit
+            println("Timeout exceeded, returning last found solution")
+            return best_subsets
+        end
 
         sort!(stack, by = x -> (-((x[2][1] !== nothing ? length(x[2][1]) : 0) +
                                   (x[2][2] !== nothing ? length(x[2][2]) : 0) +
@@ -103,7 +109,7 @@ function backward_search_length_priority(sm::Subset_minimal, (I3, I2, I1), calc_
     return best_subsets
 end
 
-function backward_search_error_priority(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold=0.1, max_steps=1000, num_samples=100)    
+function backward_search_error_priority(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold=0.1, max_steps=1000, num_samples=100, time_limit=60)    
     confidence = 1 - threshold
     initial_total_err = max_error(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
     println("Initial max error: ", initial_total_err)
@@ -117,10 +123,16 @@ function backward_search_error_priority(sm::Subset_minimal, (I3, I2, I1), calc_f
                      (I1 !== nothing ? length(I1) : 0)
 
     steps = 0
+    start_time = time()
 
-    while !isempty(stack)
+    @timeit to "backward(error) search" while !isempty(stack)
         steps += 1
         steps > max_steps && break
+
+        if time() - start_time > time_limit
+            println("Timeout exceeded, returning last found solution")
+            return best_subsets
+        end
 
         sort!(stack, by = x -> (-x[1], -((x[2][1] !== nothing ? length(x[2][1]) : 0) +
                                          (x[2][2] !== nothing ? length(x[2][2]) : 0) +

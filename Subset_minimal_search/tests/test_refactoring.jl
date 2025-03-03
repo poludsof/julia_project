@@ -55,12 +55,11 @@ solution_beam_subsets = beam_search(sm, ep; threshold=0.5, beam_size=5, num_samp
 #1. Initialize starting subsets
 I3, I2, I1 = (init_sbitset(784), nothing, nothing)
 #2. Search
-forward_search(sm, (I3, I2, I1), sdp, sdp_partial; threshold_total_err=0.5, num_samples=100, time_limit=6)
-show(to)
-solution_subsets = forward_search(sm, (I3, I2, I1), sdp, sdp_partial; threshold_total_err=0.5, num_samples=100, time_limit=6)
+solution_subsets = forward_search(sm, (I3, I2, I1), sdp, sdp_partial; threshold_total_err=0.5, num_samples=100, time_limit=100, terminate_on_first_solution=true)
 #3. Backward search or refining subsets
-reduced_solution = backward_search_length_priority(sm, solution_subsets, sdp, sdp_partial; threshold=0.5, max_steps=500, num_samples=100)
+reduced_solution = backward_search_length_priority(sm, solution_subsets, sdp, sdp_partial; threshold=0.5, max_steps=500, num_samples=100, time_limit=0.5)
 
+show(to)
 println(reduced_solution)
 
 
@@ -90,8 +89,10 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 #! implicative_subsets
 
 #* BEAM SEARCH сортировка по максимальной ошибке, сначала рассмотреть все расширения в одной греппе подмножеств, сортировка по всем группам
-#* 3 марта - добавить timeout
+#* 3 марта - добавить timeout(forward есть, добавить в остальные функции)
 #* 4 марта - добавить milp choice
+
+#? если bacward имеет много решений в начале, хранить ли все? terminate on the first solution? 
 
 
 solution = forward_search_for_all(sm, (I3, I2, I1), ep, ep_partial, threshold_total_err=0.5, num_samples=100)
