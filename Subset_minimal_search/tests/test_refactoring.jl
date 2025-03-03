@@ -36,6 +36,7 @@ function init_sbitset(n::Int)
     SBitSet{N, UInt64}()
 end
 
+const to = TimerOutput()
 
 
 
@@ -52,9 +53,11 @@ solution_beam_subsets = beam_search(sm, ep; threshold=0.5, beam_size=5, num_samp
 # threshold denotes allowed error of the subset
 
 #1. Initialize starting subsets
-I3, I2, I1 = (init_sbitset(784), init_sbitset(256), init_sbitset(256))
+I3, I2, I1 = (init_sbitset(784), nothing, nothing)
 #2. Search
-solution_subsets = forward_search(sm, (I3, I2, I1), sdp, sdp_partial; threshold_total_err=0.5, num_samples=100)
+forward_search(sm, (I3, I2, I1), sdp, sdp_partial; threshold_total_err=0.5, num_samples=100, time_limit=6)
+show(to)
+solution_subsets = forward_search(sm, (I3, I2, I1), sdp, sdp_partial; threshold_total_err=0.5, num_samples=100, time_limit=6)
 #3. Backward search or refining subsets
 reduced_solution = backward_search_length_priority(sm, solution_subsets, sdp, sdp_partial; threshold=0.5, max_steps=500, num_samples=100)
 

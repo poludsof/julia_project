@@ -58,32 +58,38 @@ end
 
 
 
-function forward_search(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold_total_err=0.1, num_samples=100)
+function forward_search(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold_total_err=0.1, num_samples=100, time_limit=60)
     confidence = 1 - threshold_total_err
     
     initial_heuristic, full_error = heuristic(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
     println("Initial error: ", full_error, " Initial heuristic: ", initial_heuristic)
 
     stack = [(initial_heuristic, full_error, (I3, I2, I1))]
-    array_of_the_best = []
+    # array_of_the_best = []
     closed_list = Set{Tuple{typeof(I3), typeof(I2), typeof(I1)}}()
+    solutions = Set{Tuple{typeof(I3), typeof(I2), typeof(I1)}}()
 
     steps = 0
     # max_steps = 100
+    start_time = time()
 
-    while !isempty(stack)
+    @timeit to "forward search" while !isempty(stack)
 
         # steps > max_steps && break
         steps += 1
+        if time() - start_time > time_limit
+            println("Timeout exceeded, returning last found solutions")
+            return solutions
+        end
 
         sort!(stack, by = x -> -x[1])
         current_heuristic, current_error, (I3, I2, I1) = pop!(stack)
         closed_list = push!(closed_list, (I3, I2, I1))
         
         if current_error <= 0
-            push!(array_of_the_best, (I3, I2, I1))
             println("Valid subset found: $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) with error: ", current_error)
-            return (I3, I2, I1)
+            # return (I3, I2, I1)
+            push!(solutions, (I3, I2, I1))
         end
 
         println("step: $steps, length $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) Expanding state with error: $current_error, heuristic: $current_heuristic")
@@ -92,5 +98,5 @@ function forward_search(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, c
     end
 
     println("Stack is empty")
-    return array_of_the_best
+    return solutions
 end
