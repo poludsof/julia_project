@@ -15,13 +15,13 @@ end
 
 
 """ SDP and EP criteria for evaluating subset(ii) robustness """
-function ep(model, img, ii, num_samples)
+function criterium_ep(model, img, ii, num_samples)
     ii === nothing && return 1
     x = sample_input(img, ii, num_samples)
     mean(Flux.softmax(model(x))[argmax(model(img)), :])
 end
 
-function sdp(model, img, ii, num_samples)
+function criterium_sdp(model, img, ii, num_samples)
     ii === nothing && return 1
     x = sample_input(img, ii, num_samples)
     mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))

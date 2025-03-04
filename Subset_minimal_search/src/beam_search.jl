@@ -89,9 +89,11 @@ function beam_search(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc
             println("TIMEOUT")
             return best_sets
         end
+
         best_sets = expand_beam_subsets(sm, calc_func, calc_func_partial, confidence, best_sets, beam_size, num_samples)
+        
         println("THE END of $iter_count, best score: ", best_sets[1][2])    
-        iter_count += 1    
+        iter_count += 1
     end
     print_beam(best_sets)
 
@@ -104,7 +106,7 @@ function expand_beam_subsets(sm::Subset_minimal, calc_func::Function, calc_func_
     pop!(best_sets)
 
     for bs in best_sets
-        expanded_subsets = search_for_best_expansion(sm, bs[1], calc_func, calc_func_partial, confidence, extended_subsets, beam_size, num_samples)
+        expanded_subsets = search_for_best_expansion(sm, bs[1], calc_func, calc_func_partial, confidence, expanded_subsets, beam_size, num_samples)
     end
 
     return expanded_subsets
@@ -124,28 +126,28 @@ function search_for_best_expansion(sm::Subset_minimal, (I3, I2, I1), calc_func::
     if I3 !== nothing
         for i in setdiff(1:784, I3)
             new_subsets = (push(I3, i), I2, I1)
-            best_results, worst_error = push_and_pop(sm, calc_func, calc_func_partial, best_results, new_subsets, confidence, beam_size, num_samples)
+            best_results, worst_error = push_and_pop(sm, calc_func, calc_func_partial, best_results, new_subsets, confidence, beam_size, num_samples, worst_error)
         end
     end
     if I2 !== nothing
         for i in setdiff(1:256, I2)
             new_subsets = (I3, push(I2, i), I1)
-            best_results, worst_error = push_and_pop(sm, calc_func, calc_func_partial, best_results, new_subsets, confidence, beam_size, num_samples)
+            best_results, worst_error = push_and_pop(sm, calc_func, calc_func_partial, best_results, new_subsets, confidence, beam_size, num_samples, worst_error)
         end
     end
     if I1 !== nothing
         for i in setdiff(1:256, I1)
             new_subsets = (I3, I2, push(I1, i))
-            best_results, worst_error = push_and_pop(sm, calc_func, calc_func_partial, best_results, new_subsets, confidence, beam_size, num_samples)
+            best_results, worst_error = push_and_pop(sm, calc_func, calc_func_partial, best_results, new_subsets, confidence, beam_size, num_samples, worst_error)
         end
     end
     return best_results
 end
 
 
-function push_and_pop(sm, calc_func, calc_func_partial, best_results, new_subsets, confidence, beam_size, num_samples)
+function push_and_pop(sm, calc_func, calc_func_partial, best_results, new_subsets, confidence, beam_size, num_samples, worst_error)
     new_heuristic, new_error = heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
-    if new_error <= worst_error
+    if isvalid(nothing, new_error, worst_error)
         push!(best_results, (new_subsets, new_error))
         if length(best_results) > beam_size
             sort!(best_results, by=x->x[2])

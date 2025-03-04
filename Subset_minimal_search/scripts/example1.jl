@@ -29,7 +29,7 @@ test_y = onehot_labels(test_y)
 
  
 ``` Train the neural network and evaluate the accuracy. ```  
-nn = Subset_minimal_search.train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
+nn = train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
 
 # argmax(nn(train_X_binary[:, 1])) - 1
 println("Train Accuracy: ", accuracy(nn, train_X_binary, train_y) * 100, "%")  # 97-99%
@@ -37,7 +37,7 @@ println("Test Accuracy: ", accuracy(nn, test_X_binary, test_y) * 100, "%")     #
 
 
 # === Try to find adversarial img ===
-# fix_inputs = collect(4:780)
+# fix_inputs = collect(4:78)
 # adversarial(nn, train_X_binary[:, 1], argmax(train_y[:, 1]) - 1, fix_inputs)
 
 

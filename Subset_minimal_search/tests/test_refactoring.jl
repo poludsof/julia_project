@@ -7,8 +7,8 @@ model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
 model = deserialize(model_path)
 
 """ nn for MILP search """
-# nn = Chain(Dense(28^2, 28, relu), Dense(28,28,relu), Dense(28,10)) 
-# model = train_nn(nn, train_X_binary, train_y, test_X_binary, test_y)
+nn = Chain(Dense(28^2, 28, relu), Dense(28,28, relu), Dense(28,10)) 
+nn = train_nn(nn, train_X_bin_neg, train_y, test_X_bin_neg, test_y)
 
 
 """ Prepare data """
@@ -42,26 +42,27 @@ const to = TimerOutput()
 
 """ Test one subset(layer) backward/forward/beam search """
 # threshold denotes the required precision of the subset
-solution_subset = one_subset_forward_search(sm, sdp; max_steps=50, threshold=0.5, num_samples=100, time_limit=60, terminate_on_first_solution=false)
-solution_subset = one_subset_backward_search(sm, sdp; max_steps=50, threshold=0.5, num_samples=100, time_limit=60)
-solution_beam_subsets = one_subset_beam_search(sm, ep; threshold=0.5, beam_size=5, num_samples=100, time_limit=60)
+solution_subset = one_subset_forward_search(sm, criterium_sdp; max_steps=50, threshold=0.5, num_samples=100, time_limit=60, terminate_on_first_solution=false)
+solution_subset = one_subset_backward_search(sm, criterium_sdp; max_steps=50, threshold=0.5, num_samples=100, time_limit=60)
+solution_beam_subsets = one_subset_beam_search(sm, criterium_ep; threshold=0.5, beam_size=5, num_samples=100, time_limit=60)
 
 
 
 
 """ Test search functions that fit one and all subsets"""
-# threshold denotes allowed error of the subset
+# Threshold denotes allowed error of the subset
+# Valid_criterium is needed to distinguish with respect to what the validity of a subset is being checked, because it can be different, e.g. as with MILP 
 
 #1. Initialize starting subsets
 I3, I2, I1 = (init_sbitset(784), nothing, nothing)
 
 #2. Search
-solution_subsets = forward_search(sm, (I3, I2, I1), sdp, sdp_partial; threshold_total_err=0.5, num_samples=100, time_limit=100, terminate_on_first_solution=true)
+solution_subsets = forward_search(sm, (I3, I2, I1), criterium_sdp; calc_func=criterium_sdp, calc_func_partial=sdp_partial, threshold_total_err=0.5, num_samples=100, time_limit=100, terminate_on_first_solution=true)
 #3. Backward search or refining subsets
-reduced_solution = backward_search_length_priority(sm, solution_subsets, sdp, sdp_partial; threshold=0.5, max_steps=500, num_samples=100, time_limit=0.5)
+reduced_solution = backward_search_length_priority(sm, solution_subsets, criterium_sdp, sdp_partial; threshold=0.5, max_steps=500, num_samples=100, time_limit=0.5)
 
 #4. Or use beam search
-beam_solution = beam_search(sm, (I3, I2, I1), sdp, sdp_partial; error_threshold=0.4, beam_size=5, num_samples=100, time_limit=600)
+beam_solution = beam_search(sm, (I3, I2, I1), criterium_sdp, sdp_partial; error_threshold=0.4, beam_size=5, num_samples=100, time_limit=600)
 
 show(to)
 println(reduced_solution)
@@ -83,6 +84,7 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 #! todo
 #? forward and backward greedy search + dfs/bfs
 #! milp choice (heuristic + criterium)
+#! valid criterium
 #// sdp/ep choice
 #// Attempt to write one search for all
 #! ep_partial doesn't work
@@ -91,8 +93,9 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 #! terminate on the first valid subset
 #// threshold of the error
 #! implicative_subsets
+#// forward/backward/beam add isvalid
 
-#* BEAM SEARCH сортировка по максимальной ошибке, сначала рассмотреть все расширения в одной греппе подмножеств, сортировка по всем группам
+#// BEAM SEARCH сортировка по максимальной ошибке, сначала рассмотреть все расширения в одной греппе подмножеств, сортировка по всем группам
 #// 3 марта - добавить timeout(forward есть, добавить в остальные функции)
 #* 4 марта - добавить milp choice
 
@@ -101,3 +104,7 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 
 solution = forward_search_for_all(sm, (I3, I2, I1), ep, ep_partial, threshold_total_err=0.5, num_samples=100)
 reduced_solution = backward_reduction_for_all(sm, solution, sdp, sdp_partial, threshold=0.5, max_steps=100, num_samples=100)
+
+
+fix_inputs = collect(1:7)
+adversarial(nn, sm.input, sm.output, fix_inputs)

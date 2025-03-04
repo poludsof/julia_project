@@ -69,7 +69,7 @@ end
 
 
 
-function forward_search(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold_total_err=0.1, num_samples=100, time_limit=60, terminate_on_first_solution=true)
+function forward_search(sm::Subset_minimal, (I3, I2, I1), valid_criterium::Function; calc_func::Function=criterium_sdp, calc_func_partial::Function=sdp_partial, threshold_total_err=0.1, num_samples=100, time_limit=60, terminate_on_first_solution=true)
     confidence = 1 - threshold_total_err
     
     initial_heuristic, full_error = heuristic(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
@@ -97,7 +97,7 @@ function forward_search(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, c
         current_heuristic, current_error, (I3, I2, I1) = pop!(stack)
         closed_list = push!(closed_list, (I3, I2, I1))
         
-        if current_error <= 0
+        if isvalid(valid_criterium, current_error, nothing)
             println("Valid subset found: $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) with error: ", current_error)
             terminate_on_first_solution && return (I3, I2, I1)
             push!(solutions, (I3, I2, I1))
