@@ -42,7 +42,7 @@ const to = TimerOutput()
 
 """ Test one subset(layer) backward/forward/beam search """
 # threshold denotes the required precision of the subset
-solution_subset = one_subset_forward_search(sm, sdp; max_steps=50, threshold=0.5, num_samples=100)
+solution_subset = one_subset_forward_search(sm, sdp; max_steps=50, threshold=0.5, num_samples=100, time_limit=60, terminate_on_first_solution=false)
 solution_subset = one_subset_backward_search(sm, sdp; max_steps=50, threshold=0.5, num_samples=100)
 solution_beam_subsets = beam_search(sm, ep; threshold=0.5, beam_size=5, num_samples=100)
 

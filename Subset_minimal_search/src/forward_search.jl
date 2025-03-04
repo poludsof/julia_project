@@ -1,12 +1,16 @@
 """
 Forward search with priority queue based on criterion value for minimal subset search for the FiRST layer of a neural network.
 """
-function one_subset_forward_search(sm::Subset_minimal, calc_func::Function; max_steps::Int=1000, threshold::Float64=0.90, num_samples=1000)
+function one_subset_forward_search(sm::Subset_minimal, calc_func::Function; max_steps::Int=1000, threshold::Float64=0.90, num_samples=1000, time_limit=60, terminate_on_first_solution=true)
     open_list = PriorityQueue{SBitSet{32, UInt32}, Float64}()
     close_list = Set{SBitSet{32, UInt32}}()
+    solutions = Set{SBitSet{32, UInt32}}()
+
     min_solution = nothing
 
     expand!(sm, calc_func, open_list, close_list, SBitSet{32, UInt32}(), num_samples)
+
+    start_time = time()
 
     steps = 0
     while !isempty(open_list)
@@ -16,15 +20,22 @@ function one_subset_forward_search(sm::Subset_minimal, calc_func::Function; max_
             break
         end
 
+        if time() - start_time > time_limit
+            println("Timeout exceeded, returning last found solutions")
+            return solutions
+        end
+
         current_subset, priority = peek(open_list)
         score = -priority
-        current_subset = dequeue!(open_list)
+        dequeue!(open_list)
 
         if score ≥ threshold
             # println("Solution found: ", current_subset, " score: ", score)
             if min_solution === nothing || length(current_subset) < length(min_solution)
                 min_solution = current_subset
                 println("length of min solution: ", length(min_solution), " score: ", score)
+                terminate_on_first_solution && return min_solution
+                push!(solutions, min_solution)
             end
         else
             # println("Expanding current_subset: ", current_subset, " score: ", score)
@@ -34,7 +45,7 @@ function one_subset_forward_search(sm::Subset_minimal, calc_func::Function; max_
         push!(close_list, current_subset)
     end
 
-    return min_solution
+    return solutions
 end
 
 
