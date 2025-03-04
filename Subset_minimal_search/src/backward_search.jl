@@ -1,5 +1,5 @@
 
-function one_subset_backward_search(sm::Subset_minimal, calc_func::Function; max_steps::Int=1000, threshold::Float64=0.9, num_samples::Int=1000)
+function one_subset_backward_search(sm::Subset_minimal, calc_func::Function; max_steps::Int=1000, threshold::Float64=0.9, num_samples::Int=1000, time_limit=60)
     open_list = PriorityQueue{SBitSet{32, UInt32}, Float64}()
     close_list = Set{SBitSet{32, UInt32}}()
     min_solution = nothing
@@ -8,12 +8,19 @@ function one_subset_backward_search(sm::Subset_minimal, calc_func::Function; max
     initial_score = calc_func(sm.nn, sm.input, full_subset, num_samples)
     enqueue!(open_list, full_subset, -initial_score)
 
+    start_time = time()
+
     steps = 0
     while !isempty(open_list)
         steps += 1
 
         if steps > max_steps && !isempty(min_solution)
             break
+        end
+
+        if time() - start_time > time_limit
+            println("Timeout exceeded, returning last found solution")
+            return min_solution
         end
 
         current_subset, priority = peek(open_list)
