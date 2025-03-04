@@ -44,7 +44,7 @@ const to = TimerOutput()
 # threshold denotes the required precision of the subset
 solution_subset = one_subset_forward_search(sm, sdp; max_steps=50, threshold=0.5, num_samples=100, time_limit=60, terminate_on_first_solution=false)
 solution_subset = one_subset_backward_search(sm, sdp; max_steps=50, threshold=0.5, num_samples=100, time_limit=60)
-solution_beam_subsets = beam_search(sm, ep; threshold=0.5, beam_size=5, num_samples=100)
+solution_beam_subsets = one_subset_beam_search(sm, ep; threshold=0.5, beam_size=5, num_samples=100, time_limit=60)
 
 
 
@@ -54,13 +54,18 @@ solution_beam_subsets = beam_search(sm, ep; threshold=0.5, beam_size=5, num_samp
 
 #1. Initialize starting subsets
 I3, I2, I1 = (init_sbitset(784), nothing, nothing)
+
 #2. Search
 solution_subsets = forward_search(sm, (I3, I2, I1), sdp, sdp_partial; threshold_total_err=0.5, num_samples=100, time_limit=100, terminate_on_first_solution=true)
 #3. Backward search or refining subsets
 reduced_solution = backward_search_length_priority(sm, solution_subsets, sdp, sdp_partial; threshold=0.5, max_steps=500, num_samples=100, time_limit=0.5)
 
+#4. Or use beam search
+beam_solution = beam_search(sm, (I3, I2, I1), sdp, sdp_partial; error_threshold=0.4, beam_size=5, num_samples=100, time_limit=600)
+
 show(to)
 println(reduced_solution)
+println(beam_solution[1])
 
 
 
@@ -68,7 +73,6 @@ println(reduced_solution)
 """ Test full search"""
 # Greedy approach
 best_set = greedy_subsets_search(sm, threshold_total_err=0.5, num_samples=100)
-
 
 # Search for subsets implicating indices of 2nd and 3rd layers
 I3, I2, I1 = reduced_solution
@@ -82,14 +86,14 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 #// sdp/ep choice
 #// Attempt to write one search for all
 #! ep_partial doesn't work
-#! beam search for all
-#! timeouts
+#// beam search for all
+#// timeouts
 #! terminate on the first valid subset
 #// threshold of the error
 #! implicative_subsets
 
 #* BEAM SEARCH сортировка по максимальной ошибке, сначала рассмотреть все расширения в одной греппе подмножеств, сортировка по всем группам
-#* 3 марта - добавить timeout(forward есть, добавить в остальные функции)
+#// 3 марта - добавить timeout(forward есть, добавить в остальные функции)
 #* 4 марта - добавить milp choice
 
 #? если bacward имеет много решений в начале, хранить ли все? terminate on the first solution? 

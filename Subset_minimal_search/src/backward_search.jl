@@ -11,7 +11,7 @@ function one_subset_backward_search(sm::Subset_minimal, calc_func::Function; max
     start_time = time()
 
     steps = 0
-    while !isempty(open_list)
+    @timeit to "one-subset bcwd search" while !isempty(open_list)
         steps += 1
 
         if steps > max_steps && !isempty(min_solution)

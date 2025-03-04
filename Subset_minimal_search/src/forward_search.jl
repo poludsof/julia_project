@@ -13,7 +13,7 @@ function one_subset_forward_search(sm::Subset_minimal, calc_func::Function; max_
     start_time = time()
 
     steps = 0
-    while !isempty(open_list)
+    @timeit to "one-subset fwd search" while !isempty(open_list)
         steps += 1
         if steps > max_steps && !isempty(min_solution)
             println("Max steps reached ", steps)
