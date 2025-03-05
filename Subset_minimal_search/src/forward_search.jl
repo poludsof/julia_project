@@ -1,7 +1,7 @@
 """
 Forward search with priority queue based on criterion value for minimal subset search for the FiRST layer of a neural network.
 """
-function one_subset_forward_search(sm::Subset_minimal, calc_func::Function; max_steps::Int=1000, threshold::Float64=0.90, num_samples=1000, time_limit=60, terminate_on_first_solution=true)
+function one_subset_forward_search(sm::Subset_minimal, calc_func::Function; max_steps::Int=1000, threshold::Float64=0.90, num_samples=1000, time_limit=Inf, terminate_on_first_solution=true)
     open_list = PriorityQueue{SBitSet{32, UInt32}, Float64}()
     close_list = Set{SBitSet{32, UInt32}}()
     solutions = Set{SBitSet{32, UInt32}}()
@@ -69,7 +69,7 @@ end
 
 
 
-function forward_search(sm::Subset_minimal, (I3, I2, I1), valid_criterium::Function; calc_func::Function=criterium_sdp, calc_func_partial::Function=sdp_partial, threshold_total_err=0.1, num_samples=100, time_limit=60, terminate_on_first_solution=true)
+function forward_search(sm::Subset_minimal, (I3, I2, I1), valid_criterium::Function; calc_func::Function=criterium_sdp, calc_func_partial::Function=sdp_partial, threshold_total_err=0.1, num_samples=100, time_limit=Inf, terminate_on_first_solution=true)
     confidence = 1 - threshold_total_err
     
     initial_heuristic, full_error = heuristic(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)

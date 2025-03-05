@@ -38,7 +38,7 @@ function expand_the_best_subsets(sm::Subset_minimal, calc_func::Function, best_s
 end
 
 
-function one_subset_beam_search(sm::Subset_minimal, calc_func::Function; threshold=0.9, beam_size=5, num_samples=100, time_limit=600)
+function one_subset_beam_search(sm::Subset_minimal, calc_func::Function; threshold=0.9, beam_size=5, num_samples=100, time_limit=Inf)
     first_best_beam = search_best_subsets(sm, calc_func, SBitSet{32, UInt32}(), beam_size, num_samples) # Initialize the first best beam
     println("FIRST BEST SETS: ")
     print_beam(first_best_beam)
@@ -68,7 +68,7 @@ end
 
 
 """ Beam search for all subsets(layers) """
-function beam_search(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; error_threshold=0.1, beam_size=5, num_samples=100, time_limit=600)
+function beam_search(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; error_threshold=0.1, beam_size=5, num_samples=100, time_limit=Inf)
     confidence = 1 - error_threshold
 
      # Initialize the first best beam

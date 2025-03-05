@@ -1,5 +1,5 @@
 
-function one_subset_backward_search(sm::Subset_minimal, calc_func::Function; max_steps::Int=1000, threshold::Float64=0.9, num_samples::Int=1000, time_limit=60)
+function one_subset_backward_search(sm::Subset_minimal, calc_func::Function; max_steps::Int=1000, threshold::Float64=0.9, num_samples::Int=1000, time_limit=Inf)
     open_list = PriorityQueue{SBitSet{32, UInt32}, Float64}()
     close_list = Set{SBitSet{32, UInt32}}()
     min_solution = nothing
@@ -39,7 +39,6 @@ function one_subset_backward_search(sm::Subset_minimal, calc_func::Function; max
         push!(close_list, current_subset)
 
         # println("Length of open_list: ", length(open_list))
-
     end
     return min_solution
 end
@@ -63,7 +62,7 @@ function expand_backward(sm::Subset_minimal, calc_func::Function, open_list::Pri
 end
 
 
-function backward_search_length_priority(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold=0.1, max_steps=1000, num_samples=100, time_limit=60)    
+function backward_search_length_priority(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold=0.1, max_steps=1000, num_samples=100, time_limit=Inf)    
     confidence = 1 - threshold
     initial_total_err = max_error(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
     println("Initial max error: ", initial_total_err)
@@ -116,7 +115,7 @@ function backward_search_length_priority(sm::Subset_minimal, (I3, I2, I1), calc_
     return best_subsets
 end
 
-function backward_search_error_priority(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold=0.1, max_steps=1000, num_samples=100, time_limit=60)    
+function backward_search_error_priority(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold=0.1, max_steps=1000, num_samples=100, time_limit=Inf)    
     confidence = 1 - threshold
     initial_total_err = max_error(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
     println("Initial max error: ", initial_total_err)

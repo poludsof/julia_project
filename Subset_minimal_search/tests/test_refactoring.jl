@@ -7,8 +7,8 @@ model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
 model = deserialize(model_path)
 
 """ nn for MILP search """
-nn = Chain(Dense(28^2, 28, relu), Dense(28,28, relu), Dense(28,10)) 
-nn = train_nn(nn, train_X_bin_neg, train_y, test_X_bin_neg, test_y)
+# nn = Chain(Dense(28^2, 28, relu), Dense(28,28, relu), Dense(28,10)) 
+# nn = train_nn(nn, train_X_bin_neg, train_y, test_X_bin_neg, test_y)
 
 
 """ Prepare data """
@@ -84,7 +84,7 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 #! todo
 #? forward and backward greedy search + dfs/bfs
 #! milp choice (heuristic + criterium)
-#! valid criterium
+#! valid criterium (for milp)
 #// sdp/ep choice
 #// Attempt to write one search for all
 #! ep_partial doesn't work
@@ -97,7 +97,7 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 
 #// BEAM SEARCH сортировка по максимальной ошибке, сначала рассмотреть все расширения в одной греппе подмножеств, сортировка по всем группам
 #// 3 марта - добавить timeout(forward есть, добавить в остальные функции)
-#* 4 марта - добавить milp choice
+#* 4 марта - add milp choice
 
 #? если bacward имеет много решений в начале, хранить ли все? terminate on the first solution? 
 
@@ -107,4 +107,4 @@ reduced_solution = backward_reduction_for_all(sm, solution, sdp, sdp_partial, th
 
 
 fix_inputs = collect(1:7)
-adversarial(nn, sm.input, sm.output, fix_inputs)
+adversarial(model, sm.input, sm.output, fix_inputs)
