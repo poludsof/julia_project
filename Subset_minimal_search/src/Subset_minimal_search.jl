@@ -1,4 +1,4 @@
-# module Subset_minimal_search
+module Subset_minimal_search
 
 using Flux
 using JuMP
@@ -45,4 +45,6 @@ include("heuristic.jl")
 include("tmp_bcw.jl")
 include("tmp_one_search_for_all.jl")
 
-# end
+export one_subset_backward_search, one_subset_forward_search, one_subset_beam_search
+export preprocess_binary, preprocess_bin_neg 
+end

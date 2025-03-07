@@ -14,7 +14,9 @@ function uniform_distribution(img, ii, num_samples)
 end
 
 function data_distribution(sm::Subset_minimal, ii, data_model, num_samples)
-    # todo
+    r = data_model
+    r = condition(r, sm.input, ii)
+    sample_all(r, num_samples)
 end
 
 function mi_distribution(sm::Subset_minimal, ii, num_samples)
