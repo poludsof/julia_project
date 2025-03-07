@@ -97,7 +97,7 @@ function forward_search(sm::Subset_minimal, (I3, I2, I1), valid_criterium::Funct
         current_heuristic, current_error, (I3, I2, I1) = pop!(stack)
         closed_list = push!(closed_list, (I3, I2, I1))
         
-        if isvalid(valid_criterium, current_error, nothing)
+        if isvalid(valid_criterium, current_error, 0)
             println("Valid subset found: $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) with error: ", current_error)
             terminate_on_first_solution && return (I3, I2, I1)
             push!(solutions, (I3, I2, I1))
@@ -110,4 +110,37 @@ function forward_search(sm::Subset_minimal, (I3, I2, I1), valid_criterium::Funct
 
     println("Stack is empty")
     return solutions
+end
+
+
+
+function expand_frwd(sm::Subset_minimal, calc_func::Function, calc_func_partial::Function, stack, closed_list, (I3, I2, I1), confidence, num_samples)
+    if I3 !== nothing
+        for i in setdiff(1:784, I3)
+            new_subsets = (push(I3, i), I2, I1)
+            new_heuristic, new_error = heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
+            if new_subsets ∉ closed_list
+                push!(stack, (new_heuristic, new_error, new_subsets))    
+            end
+        end
+    end
+    if I2 !== nothing
+        for i in setdiff(1:256, I2)
+            new_subsets = (I3, push(I2, i), I1)
+            new_heuristic, new_error = heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
+            if new_subsets ∉ closed_list
+                push!(stack, (new_heuristic, new_error, new_subsets))
+            end
+        end
+    end
+    if I1 !== nothing
+        for i in setdiff(1:256, I1)
+            new_subsets = (I3, I2, push(I1, i))
+            new_heuristic, new_error = heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
+            if new_subsets ∉ closed_list
+                push!(stack, (new_heuristic, new_error, new_subsets))
+            end
+        end
+    end
+    stack
 end

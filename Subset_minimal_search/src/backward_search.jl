@@ -167,3 +167,34 @@ function backward_search_error_priority(sm::Subset_minimal, (I3, I2, I1), calc_f
     
     return best_subsets
 end
+
+function expand_bcwd(sm::Subset_minimal, calc_func::Function, calc_func_partial::Function, stack, closed_list, (I3, I2, I1), initial_total_err, confidence, num_samples)
+    if I3 !== nothing
+        for i in collect(I3)
+            new_subsets = (pop(I3, i), I2, I1)
+            new_error = max_error(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
+            if isvalid(calc_func, new_error, initial_total_err) && new_subsets ∉ closed_list
+                push!(stack, (new_error, new_subsets))
+            end
+        end
+    end
+    if I2 !== nothing
+        for i in collect(I2)
+            new_subsets = (I3, pop(I2, i), I1)
+            new_error = max_error(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
+            if isvalid(calc_func, new_error, initial_total_err) && new_subsets ∉ closed_list
+                push!(stack, (new_error, new_subsets))
+            end
+        end
+    end
+    if  I1 !== nothing
+        for i in collect(I1)
+            new_subsets = (I3, I2, pop(I1, i))
+            new_error = max_error(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
+            if isvalid(calc_func, new_error, initial_total_err) && new_subsets ∉ closed_list
+                push!(stack, (new_error, new_subsets))
+            end
+        end
+    end
+    stack
+end

@@ -57,9 +57,9 @@ solution_beam_subsets = one_subset_beam_search(sm, criterium_ep; threshold=0.5, 
 I3, I2, I1 = (init_sbitset(784), nothing, nothing)
 
 #2. Search
-solution_subsets = forward_search(sm, (I3, I2, I1), criterium_sdp; calc_func=criterium_sdp, calc_func_partial=sdp_partial, threshold_total_err=0.5, num_samples=100, time_limit=100, terminate_on_first_solution=true)
+solution_subsets = forward_search(sm, (I3, I2, I1), criterium_sdp; calc_func=criterium_sdp, calc_func_partial=sdp_partial, threshold_total_err=0.5, num_samples=100, time_limit=100, terminate_on_first_solution=false)
 #3. Backward search or refining subsets
-reduced_solution = backward_search_length_priority(sm, solution_subsets, criterium_sdp, sdp_partial; threshold=0.5, max_steps=500, num_samples=100, time_limit=0.5)
+reduced_solution = backward_search_length_priority(sm, solution_subsets, criterium_sdp, sdp_partial; threshold=0.5, max_steps=500, num_samples=100, time_limit=50)
 
 #4. Or use beam search
 beam_solution = beam_search(sm, (I3, I2, I1), criterium_sdp, sdp_partial; error_threshold=0.4, beam_size=5, num_samples=100, time_limit=600)
@@ -81,7 +81,7 @@ subsubset_I2 = implicative_subsets(sm.nn[1], sm.input, I3, I2, threshold=0.5, nu
 subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, threshold=0.5, num_samples=100)
 
 
-#! todo
+# TODO
 #? forward and backward greedy search + dfs/bfs
 #! milp choice (heuristic + criterium)
 #! valid criterium (for milp)
@@ -94,6 +94,8 @@ subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, thresho
 #// threshold of the error
 #! implicative_subsets
 #// forward/backward/beam add isvalid
+#! distribution choice
+#! check isvalid (threshold error and 0 <=)
 
 #// BEAM SEARCH сортировка по максимальной ошибке, сначала рассмотреть все расширения в одной греппе подмножеств, сортировка по всем группам
 #// 3 марта - добавить timeout(forward есть, добавить в остальные функции)

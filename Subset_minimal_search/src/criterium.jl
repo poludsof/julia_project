@@ -17,13 +17,13 @@ end
 """ SDP and EP criteria for evaluating subset(ii) robustness """
 function criterium_ep(model, img, ii, num_samples)
     ii === nothing && return 1
-    x = sample_input(img, ii, num_samples)
+    x = uniform_distribution(img, ii, num_samples)
     mean(Flux.softmax(model(x))[argmax(model(img)), :])
 end
 
 function criterium_sdp(model, img, ii, num_samples)
     ii === nothing && return 1
-    x = sample_input(img, ii, num_samples)
+    x = uniform_distribution(img, ii, num_samples)
     mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
 end
 
@@ -35,7 +35,7 @@ function sdp_partial(model, img, ii, jj, num_samples)
     isempty(jj) && return(1.0)
     isempty(ii) && return(0.0)
     jj = collect(jj)
-    x = sample_input(img, ii, num_samples)
+    x = uniform_distribution(img, ii, num_samples)
     mean(model(x)[jj, :] .== model(img)[jj, :])
 end
 
@@ -45,6 +45,6 @@ function ep_partial(model, img, ii, jj, num_samples)
     isempty(jj) && return(1.0)
     isempty(ii) && return(0.0)
     jj = collect(jj)
-    x = sample_input(img, ii, num_samples)
+    x = uniform_distribution(img, ii, num_samples)
     # mean(Flux.softmax(model(x))[jj, :] .== Flux.softmax(model(img))[jj, :])
 end

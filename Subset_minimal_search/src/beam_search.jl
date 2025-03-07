@@ -59,7 +59,7 @@ function one_subset_beam_search(sm::Subset_minimal, calc_func::Function; thresho
         println("THE END of $iter_count, best score: ", best_sets[1][2])    
         iter_count += 1    
     end
-    print_sets(best_sets)
+    print_beam(best_sets)
 
     return best_sets
 end
@@ -147,7 +147,7 @@ end
 
 function push_and_pop(sm, calc_func, calc_func_partial, best_results, new_subsets, confidence, beam_size, num_samples, worst_error)
     new_heuristic, new_error = heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
-    if isvalid(nothing, new_error, worst_error)
+    if isvalid(calc_func, new_error, worst_error)
         push!(best_results, (new_subsets, new_error))
         if length(best_results) > beam_size
             sort!(best_results, by=x->x[2])
