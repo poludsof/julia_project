@@ -1,5 +1,5 @@
 
-function one_subset_backward_search(sm::Subset_minimal, calc_func::Function; max_steps::Int=1000, threshold::Float64=0.9, num_samples::Int=1000, time_limit=Inf)
+function one_subset_backward_search(sm::Subset_minimal, calc_func::Function; data_model=nothing, max_steps::Int=1000, threshold::Float64=0.9, num_samples::Int=1000, time_limit=Inf)
     open_list = PriorityQueue{SBitSet{32, UInt32}, Float64}()
     close_list = Set{SBitSet{32, UInt32}}()
     min_solution = nothing
@@ -33,7 +33,7 @@ function one_subset_backward_search(sm::Subset_minimal, calc_func::Function; max
                 min_solution = current_subset
                 println("length of min solution: ", length(min_solution), " score: ", score)
             end
-            expand_backward(sm, calc_func, open_list, close_list, current_subset, num_samples)
+            expand_backward(sm, calc_func, data_model, open_list, close_list, current_subset, num_samples)
         end
 
         push!(close_list, current_subset)
@@ -43,14 +43,14 @@ function one_subset_backward_search(sm::Subset_minimal, calc_func::Function; max
     return min_solution
 end
 
-function expand_backward(sm::Subset_minimal, calc_func::Function, open_list::PriorityQueue{SBitSet{N, T}, Float64}, close_list::Set{SBitSet{N, T}}, subset::SBitSet{N, T}, num_samples) where {N, T}
+function expand_backward(sm::Subset_minimal, calc_func::Function, data_model, open_list::PriorityQueue{SBitSet{N, T}, Float64}, close_list::Set{SBitSet{N, T}}, subset::SBitSet{N, T}, num_samples) where {N, T}
     for feature in collect(subset)
         new_subset = SBitSet{32, UInt32}(setdiff(subset, SBitSet{32, UInt32}(feature)))
         if new_subset ∈ close_list
             continue
         end
 
-        score = calc_func(sm.nn, sm.input, new_subset, num_samples)
+        score = calc_func(sm.nn, sm.input, new_subset, data_model, num_samples)
         if !haskey(open_list, new_subset)
             enqueue!(open_list, new_subset, -score)
         end
@@ -62,9 +62,9 @@ function expand_backward(sm::Subset_minimal, calc_func::Function, open_list::Pri
 end
 
 
-function backward_search_length_priority(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold=0.1, max_steps=1000, num_samples=100, time_limit=Inf)    
+function backward_search_length_priority(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; data_model=nothing, threshold=0.1, max_steps=1000, num_samples=100, time_limit=Inf)    
     confidence = 1 - threshold
-    initial_total_err = max_error(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
+    initial_total_err = max_error(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, data_model, num_samples)
     println("Initial max error: ", initial_total_err)
 
     stack = [(initial_total_err, (I3, I2, I1))]
@@ -106,7 +106,7 @@ function backward_search_length_priority(sm::Subset_minimal, (I3, I2, I1), calc_
             best_total_len = total_len
         end
         
-        stack = expand_bcwd(sm, calc_func, calc_func_partial, stack, closed_list, current_subsets, initial_total_err, confidence, num_samples)
+        stack = expand_bcwd(sm, calc_func, calc_func_partial, data_model, stack, closed_list, current_subsets, initial_total_err, confidence, num_samples)
 
     end
     I3, I2, I1 = best_subsets
@@ -115,9 +115,9 @@ function backward_search_length_priority(sm::Subset_minimal, (I3, I2, I1), calc_
     return best_subsets
 end
 
-function backward_search_error_priority(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; threshold=0.1, max_steps=1000, num_samples=100, time_limit=Inf)    
+function backward_search_error_priority(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; data_model=nothing, threshold=0.1, max_steps=1000, num_samples=100, time_limit=Inf)    
     confidence = 1 - threshold
-    initial_total_err = max_error(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
+    initial_total_err = max_error(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, data_model, num_samples)
     println("Initial max error: ", initial_total_err)
 
     stack = [(initial_total_err, (I3, I2, I1))]
@@ -159,7 +159,7 @@ function backward_search_error_priority(sm::Subset_minimal, (I3, I2, I1), calc_f
             best_total_len = total_len
         end
         
-        stack = expand_bcwd(sm, calc_func, calc_func_partial, stack, closed_list, current_subsets, initial_total_err, confidence, num_samples)
+        stack = expand_bcwd(sm, calc_func, calc_func_partial, data_model, stack, closed_list, current_subsets, initial_total_err, confidence, num_samples)
 
     end
     I3, I2, I1 = best_subsets
@@ -168,11 +168,11 @@ function backward_search_error_priority(sm::Subset_minimal, (I3, I2, I1), calc_f
     return best_subsets
 end
 
-function expand_bcwd(sm::Subset_minimal, calc_func::Function, calc_func_partial::Function, stack, closed_list, (I3, I2, I1), initial_total_err, confidence, num_samples)
+function expand_bcwd(sm::Subset_minimal, calc_func::Function, calc_func_partial::Function,data_model,  stack, closed_list, (I3, I2, I1), initial_total_err, confidence, num_samples)
     if I3 !== nothing
         for i in collect(I3)
             new_subsets = (pop(I3, i), I2, I1)
-            new_error = max_error(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
+            new_error = max_error(sm, calc_func, calc_func_partial, new_subsets, confidence, data_model, num_samples)
             if isvalid(calc_func, new_error, initial_total_err) && new_subsets ∉ closed_list
                 push!(stack, (new_error, new_subsets))
             end
@@ -181,7 +181,7 @@ function expand_bcwd(sm::Subset_minimal, calc_func::Function, calc_func_partial:
     if I2 !== nothing
         for i in collect(I2)
             new_subsets = (I3, pop(I2, i), I1)
-            new_error = max_error(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
+            new_error = max_error(sm, calc_func, calc_func_partial, new_subsets, confidence, data_model, num_samples)
             if isvalid(calc_func, new_error, initial_total_err) && new_subsets ∉ closed_list
                 push!(stack, (new_error, new_subsets))
             end
@@ -190,7 +190,7 @@ function expand_bcwd(sm::Subset_minimal, calc_func::Function, calc_func_partial:
     if  I1 !== nothing
         for i in collect(I1)
             new_subsets = (I3, I2, pop(I1, i))
-            new_error = max_error(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
+            new_error = max_error(sm, calc_func, calc_func_partial, new_subsets, confidence, data_model, num_samples)
             if isvalid(calc_func, new_error, initial_total_err) && new_subsets ∉ closed_list
                 push!(stack, (new_error, new_subsets))
             end

@@ -39,7 +39,7 @@ function condition(r::BernoulliMixture, xₛ, known_ii::SBitSet)
     for i in known_ii
         mask[i] = true
     end
-    condition(r, [xᵢ >0 for xᵢ in xs], mask)
+    condition(r, [xᵢ >0 for xᵢ in xₛ], mask)
 end
 
 function condition(r::BernoulliMixture, xₛ, mask::Vector{Bool})
@@ -100,22 +100,22 @@ function sample_free!(u::Matrix, r::ConditionedBernoulliMixture)
     u
 end
 
-function sample_free!(u::PackedMatrix{N,I}, r::ConditionedBernoulliMixture) where {N,I}
-    mask = r.mask
-    D = u.nrows
-    D != length(mask) - sum(mask) && error("Dimension of `u` does not match the dimension of the sampler. `u` has $(D) rows while sampler has dimension $(length(r.free2orig))")
-    bits = 8*sizeof(I)
-    @inbounds for col in axes(u.x, 2)
-        cid = sample(r.w)
-        for j in 1:N
-            y = zero(I)
-            upper_bound = (j*bits > D) ? D : j*bits 
-            for b in upper_bound:-1:bits*(j-1) + 1
-                y <<= 1
-                y |= (rand() < r.r.p[r.free2orig[b], cid])
-            end
-            u.x[j,col] = y
-        end
-    end
-    u
-end
+# function sample_free!(u::PackedMatrix{N,I}, r::ConditionedBernoulliMixture) where {N,I}
+#     mask = r.mask
+#     D = u.nrows
+#     D != length(mask) - sum(mask) && error("Dimension of `u` does not match the dimension of the sampler. `u` has $(D) rows while sampler has dimension $(length(r.free2orig))")
+#     bits = 8*sizeof(I)
+#     @inbounds for col in axes(u.x, 2)
+#         cid = sample(r.w)
+#         for j in 1:N
+#             y = zero(I)
+#             upper_bound = (j*bits > D) ? D : j*bits 
+#             for b in upper_bound:-1:bits*(j-1) + 1
+#                 y <<= 1
+#                 y |= (rand() < r.r.p[r.free2orig[b], cid])
+#             end
+#             u.x[j,col] = y
+#         end
+#     end
+#     u
+# end

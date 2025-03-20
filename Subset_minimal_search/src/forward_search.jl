@@ -1,14 +1,14 @@
 """
 Forward search with priority queue based on criterion value for minimal subset search for the FiRST layer of a neural network.
 """
-function one_subset_forward_search(sm::Subset_minimal, calc_func::Function; max_steps::Int=1000, threshold::Float64=0.90, num_samples=1000, time_limit=Inf, terminate_on_first_solution=true)
+function one_subset_forward_search(sm::Subset_minimal, calc_func::Function; data_model=nothing, max_steps::Int=1000, threshold::Float64=0.90, num_samples=1000, time_limit=Inf, terminate_on_first_solution=true)
     open_list = PriorityQueue{SBitSet{32, UInt32}, Float64}()
     close_list = Set{SBitSet{32, UInt32}}()
     solutions = Set{SBitSet{32, UInt32}}()
 
     min_solution = nothing
 
-    expand!(sm, calc_func, open_list, close_list, SBitSet{32, UInt32}(), num_samples)
+    expand!(sm, calc_func, data_model, open_list, close_list, SBitSet{32, UInt32}(), num_samples)
 
     start_time = time()
 
@@ -39,7 +39,7 @@ function one_subset_forward_search(sm::Subset_minimal, calc_func::Function; max_
             end
         else
             # println("Expanding current_subset: ", current_subset, " score: ", score)
-            expand!(sm, calc_func, open_list, close_list, current_subset, num_samples)
+            expand!(sm, calc_func, data_model, open_list, close_list, current_subset, num_samples)
         end
 
         push!(close_list, current_subset)
@@ -50,7 +50,7 @@ end
 
 
 """ Expand the current subset by adding one(best) feature at a time """
-function expand!(sm, calc_func::Function, open_list::PriorityQueue{SBitSet{N, T}, Float64}, close_list::Set{SBitSet{N, T}}, subset::SBitSet{N, T}, num_samples) where {N, T}
+function expand!(sm, calc_func::Function, data_model, open_list::PriorityQueue{SBitSet{N, T}, Float64}, close_list::Set{SBitSet{N, T}}, subset::SBitSet{N, T}, num_samples) where {N, T}
     remaining_features = setdiff(1:size(sm.input, 1), subset)
     for feature in remaining_features
         new_subset = union(subset, SBitSet{32, UInt32}(feature))
@@ -58,7 +58,7 @@ function expand!(sm, calc_func::Function, open_list::PriorityQueue{SBitSet{N, T}
         if new_subset ∈ close_list
             continue
         end
-        score = calc_func(sm.nn, sm.input, new_subset, num_samples)
+        score = calc_func(sm.nn, sm.input, new_subset, data_model, num_samples)
 
         if !haskey(open_list, new_subset)
             enqueue!(open_list, new_subset, -score)
@@ -69,10 +69,10 @@ end
 
 
 
-function forward_search(sm::Subset_minimal, (I3, I2, I1), valid_criterium::Function; calc_func::Function=criterium_sdp, calc_func_partial::Function=sdp_partial, threshold_total_err=0.1, num_samples=100, time_limit=Inf, terminate_on_first_solution=true)
+function forward_search(sm::Subset_minimal, (I3, I2, I1), valid_criterium::Function; calc_func::Function=criterium_sdp, calc_func_partial::Function=sdp_partial, data_model=nothing, threshold_total_err=0.1, num_samples=100, time_limit=Inf, terminate_on_first_solution=true)
     confidence = 1 - threshold_total_err
     
-    initial_heuristic, full_error = heuristic(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, num_samples)
+    initial_heuristic, full_error = heuristic(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, data_model, num_samples)
     println("Initial error: ", full_error, " Initial heuristic: ", initial_heuristic)
 
     stack = [(initial_heuristic, full_error, (I3, I2, I1))]
@@ -105,7 +105,7 @@ function forward_search(sm::Subset_minimal, (I3, I2, I1), valid_criterium::Funct
 
         println("step: $steps, length $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) Expanding state with error: $current_error, heuristic: $current_heuristic")
 
-        stack = expand_frwd(sm, calc_func, calc_func_partial, stack, closed_list, (I3, I2, I1), confidence, num_samples)
+        stack = expand_frwd(sm, calc_func, calc_func_partial, data_model, stack, closed_list, (I3, I2, I1), confidence, num_samples)
     end
 
     println("Stack is empty")
@@ -114,11 +114,11 @@ end
 
 
 
-function expand_frwd(sm::Subset_minimal, calc_func::Function, calc_func_partial::Function, stack, closed_list, (I3, I2, I1), confidence, num_samples)
+function expand_frwd(sm::Subset_minimal, calc_func::Function, calc_func_partial::Function, data_model, stack, closed_list, (I3, I2, I1), confidence, num_samples)
     if I3 !== nothing
         for i in setdiff(1:784, I3)
             new_subsets = (push(I3, i), I2, I1)
-            new_heuristic, new_error = heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
+            new_heuristic, new_error = heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, data_model, num_samples)
             if new_subsets ∉ closed_list
                 push!(stack, (new_heuristic, new_error, new_subsets))    
             end
@@ -127,7 +127,7 @@ function expand_frwd(sm::Subset_minimal, calc_func::Function, calc_func_partial:
     if I2 !== nothing
         for i in setdiff(1:256, I2)
             new_subsets = (I3, push(I2, i), I1)
-            new_heuristic, new_error = heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
+            new_heuristic, new_error = heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, data_model, num_samples)
             if new_subsets ∉ closed_list
                 push!(stack, (new_heuristic, new_error, new_subsets))
             end
@@ -136,7 +136,7 @@ function expand_frwd(sm::Subset_minimal, calc_func::Function, calc_func_partial:
     if I1 !== nothing
         for i in setdiff(1:256, I1)
             new_subsets = (I3, I2, push(I1, i))
-            new_heuristic, new_error = heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, num_samples)
+            new_heuristic, new_error = heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, data_model, num_samples)
             if new_subsets ∉ closed_list
                 push!(stack, (new_heuristic, new_error, new_subsets))
             end
