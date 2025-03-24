@@ -18,6 +18,7 @@ using Serialization
 using DataStructures
 using Distributions
 
+const to = TimerOutput()
 
 struct Subset_minimal{NN, I, O}
     nn::NN

@@ -23,7 +23,11 @@ end
 
 function criterium_sdp(model, img, ii, data_model, num_samples)
     ii === nothing && return 1
-    x = data_distribution(img, ii, data_model, num_samples)
+    if data_model === nothing
+        x = uniform_distribution(img, ii, num_samples)
+    else
+        x = data_distribution(img, ii, data_model, num_samples)
+    end
     mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
 end
 
