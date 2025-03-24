@@ -37,8 +37,8 @@ end
 function heuristic(sm::Subset_minimal, calc_func::Function, calc_func_partial::Function, (I3, I2, I1), confidence, data_model, num_samples)
     hs = h_vals(sm, calc_func, calc_func_partial, (I3, I2, I1), data_model, num_samples)
     (;
-    hsum = mapreduce(x -> max(0, confidence-x), +, hs),
-    hmax = mapreduce(x -> max(0, confidence-x), max, hs),
+    hsum = mapreduce(x -> max(0, confidence - x), +, hs),
+    hmax = mapreduce(x -> max(0, confidence - x), max, hs),
     )
 end
 
