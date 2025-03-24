@@ -15,22 +15,34 @@ end
 
 
 """ SDP and EP criteria for evaluating subset(ii) robustness """
+
 function criterium_ep(model, img, ii, data_model, num_samples)
-    ii === nothing && return 1
     x = uniform_distribution(img, ii, num_samples)
     mean(Flux.softmax(model(x))[argmax(model(img)), :])
 end
 
-function criterium_sdp(model, img, ii, data_model, num_samples)
-    ii === nothing && return 1
-    if data_model === nothing
-        x = uniform_distribution(img, ii, num_samples)
-    else
-        x = data_distribution(img, ii, data_model, num_samples)
-    end
+function criterium_ep(model, img, ii::Nothing, data_model, num_samples)
+    return(1)
+end
+
+
+function criterium_sdp(model, img, ii::Nothing, data_model::Nothing, num_samples)
+    return(1)
+end
+
+function criterium_sdp(model, img, ii, data_model::Nothing, num_samples)
+    x = uniform_distribution(img, ii, num_samples)
     mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
 end
 
+function criterium_sdp(model, img, ii, data_model, num_samples)
+    x = data_distribution(img, ii, data_model, num_samples)
+    mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
+end
+
+function criterium_sdp(model, img, ii::Nothing, data_model, num_samples) 
+    return(1)
+end
 
 
 """ Partial SDP and EP criteria for evaluating the implication score of a subset of one layer(ii) on another layer(jj) """

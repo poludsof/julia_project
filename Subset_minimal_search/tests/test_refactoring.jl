@@ -7,6 +7,8 @@ using Subset_minimal_search.StaticBitSets
 using Subset_minimal_search.TimerOutputs
 using Serialization
 using Subset_minimal_search.Makie
+using ProfileCanvas, TimerOutputs
+const to = Subset_minimal_search.to
 # using Subset_minimal_search.Makie.Colors
 # using Subset_minimal_search.Serialization
 # using Subset_minimal_search.DataStructures
