@@ -25,12 +25,12 @@ end
 
 
 function h_vals(sm::Subset_minimal, calc_func::Function, calc_func_partial::Function, (I3, I2, I1), data_model, num_samples)
-    (calc_func(sm.nn, sm.input, I3, data_model, num_samples),
-    calc_func(sm.nn[2:3], sm.nn[1](sm.input), I2, data_model, num_samples),
-    calc_func(sm.nn[3], sm.nn[1:2](sm.input), I1, data_model, num_samples),
-    calc_func_partial(sm.nn[1], sm.input, I3, I2, data_model, num_samples),
-    calc_func_partial(sm.nn[1:2], sm.input, I3, I1, data_model, num_samples),
-    calc_func_partial(sm.nn[2], sm.nn[1](sm.input), I2, I1, data_model, num_samples),
+    (calc_func(sm.nn, sm.input, sm.output,  I3, data_model, num_samples),
+    calc_func(sm.nn[2:3], sm.nn[1](sm.input), sm.output, I2, data_model, num_samples),
+    calc_func(sm.nn[3], sm.nn[1:2](sm.input), sm.output, I1, data_model, num_samples),
+    calc_func_partial(sm.nn[1], sm.input, sm.output, I3, I2, data_model, num_samples),
+    calc_func_partial(sm.nn[1:2], sm.input, sm.output, I3, I1, data_model, num_samples),
+    calc_func_partial(sm.nn[2], sm.nn[1](sm.input), sm.output, I2, I1, data_model, num_samples),
     )
 end
 

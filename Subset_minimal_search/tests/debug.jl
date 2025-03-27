@@ -1,3 +1,4 @@
+using CUDA
 using Subset_minimal_search
 import Subset_minimal_search as SMS
 using Subset_minimal_search.Flux
@@ -40,6 +41,7 @@ test_y = SMS.onehot_labels(test_y)
 
 
 to_gpu = gpu
+to_gpu = cpu
 """ Prepare image and label """
 xₛ = train_X_bin_neg[:, 1] |> to_gpu
 yₛ = argmax(train_y[:, 1]) - 1
@@ -86,66 +88,11 @@ reset_timer!(to)
 I3, I2, I1 = (init_sbitset(784), nothing, nothing)
 
 #2. Search
-# data_model = r for data distribution
-# data_model = nothing for uniform
-for img_i in 1:100
-    """ Prepare image and label """
-    xₛ = train_X_bin_neg[:, img_i] |> to_gpu
-    yₛ = argmax(model(xₛ))
-    sm = SMS.Subset_minimal(to_gpu(model), xₛ, yₛ)
-    I3, I2, I1 = (init_sbitset(784), nothing, nothing)
+""" Prepare image and label """
+xₛ = train_X_bin_neg[:, img_i] |> to_gpu
+yₛ = argmax(model(xₛ))
+sm = SMS.Subset_minimal(to_gpu(model), xₛ, yₛ)
+I3, I2, I1 = (init_sbitset(784), nothing, nothing)
 
+t = @elapsed solution_subsets = forward_search(sm, (I3, I2, I1), criterium_sdp; calc_func=criterium_sdp, calc_func_partial=sdp_partial, data_model=nothing, threshold_total_err=0.1, num_samples=10000, terminate_on_first_solution=true)
 
-
-solution_subsets = forward_search(sm, (I3, I2, I1), criterium_sdp; calc_func=criterium_sdp, calc_func_partial=sdp_partial, data_model=nothing, threshold_total_err=0.1, num_samples=10000, terminate_on_first_solution=true)
-#3. Backward search or refining subsets
-reduced_solution = backward_search_length_priority(sm, solution_subsets, criterium_sdp, sdp_partial; data_model=nothing, threshold=0.1, max_steps=100, num_samples=10000, time_limit=50)
-
-#4. Or beam search
-beam_solution = beam_search(sm, (I3, I2, I1), criterium_sdp, sdp_partial; data_model=r, error_threshold=0.1, beam_size=5, num_samples=1000)
-
-show(to)
-println(solution_subsets[1])
-
-
-
-
-
-
-
-
-""" not important for now """
-# # Greedy approach
-# best_set = greedy_subsets_search(sm, threshold_total_err=0.5, num_samples=100)
-
-# # Search for subsets implicating indices of 2nd and 3rd layers
-# I3, I2, I1 = reduced_solution
-# subsubset_I2 = implicative_subsets(sm.nn[1], sm.input, I3, I2, threshold=0.5, num_samples=100)
-# subsubset_I1 = implicative_subsets(sm.nn[2], sm.nn[1](sm.input), I2, I1, threshold=0.5, num_samples=100)
-
-
-# TODO
-#? forward and backward greedy search + dfs/bfs
-#! milp choice (heuristic + criterium)
-#! valid criterium (for milp)
-#// sdp/ep choice
-#// Attempt to write one search for all
-#! ep_partial doesn't work
-#// beam search for all
-#// timeouts
-#! terminate on the first valid subset
-#// threshold of the error
-#! implicative_subsets
-#// forward/backward/beam add isvalid
-#! distribution choice
-#! check isvalid (threshold error and 0 <=)
-
-#? если bacward имеет много решений в начале, хранить ли все? terminate on the first solution? 
-
-
-# solution = forward_search_for_all(sm, (I3, I2, I1), ep, ep_partial, threshold_total_err=0.5, num_samples=100)
-# reduced_solution = backward_reduction_for_all(sm, solution, sdp, sdp_partial, threshold=0.5, max_steps=100, num_samples=100)
-
-
-# fix_inputs = collect(1:7)
-# adversarial(model, sm.input, sm.output, fix_inputs)
