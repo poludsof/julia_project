@@ -1,14 +1,4 @@
 
-function isvalid(criterium, current_error, threshold_error)
-    if criterium == criterium_sdp || criterium == criterium_ep
-        if current_error <= threshold_error
-            return true
-        end
-    end
-    return false
-end
-
-
 function uniform_distribution(img, ii, num_samples)
     sample_input(img, ii, num_samples)
 end

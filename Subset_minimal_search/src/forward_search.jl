@@ -68,11 +68,8 @@ function expand!(sm, calc_func::Function, data_model, open_list::PriorityQueue{S
 end
 
 
-
-function forward_search(sm::Subset_minimal, (I3, I2, I1), valid_criterium::Function; calc_func::Function=criterium_sdp, calc_func_partial::Function=sdp_partial, data_model=nothing, threshold_total_err=0.1, num_samples=100, time_limit=Inf, terminate_on_first_solution=true)
-    confidence = 1 - threshold_total_err
-    
-    initial_heuristic, full_error = heuristic(sm, calc_func, calc_func_partial, (I3, I2, I1), confidence, data_model, num_samples)
+function forward_search(sm::Subset_minimal, (I3, I2, I1), isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true)
+    initial_heuristic, full_error = heuristic_fun((I3, I2, I1))
     println("Initial error: ", full_error, " Initial heuristic: ", initial_heuristic)
 
     stack = [(initial_heuristic, full_error, (I3, I2, I1))]
@@ -97,9 +94,9 @@ function forward_search(sm::Subset_minimal, (I3, I2, I1), valid_criterium::Funct
         current_heuristic, current_error, (I3, I2, I1) = pop!(stack)
         closed_list = push!(closed_list, (I3, I2, I1))
         
-        v = @timeit to "isvalid" isvalid(valid_criterium, current_error, 0)
+        v = @timeit to "isvalid" isvalid((I3, I2, I1))
 
-        if isvalid(valid_criterium, current_error, 0)
+        if v
             println("Valid subset found: $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) with error: ", current_error)
             terminate_on_first_solution && return (I3, I2, I1)
             push!(solutions, (I3, I2, I1))
@@ -107,7 +104,7 @@ function forward_search(sm::Subset_minimal, (I3, I2, I1), valid_criterium::Funct
 
         println("step: $steps, length $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) Expanding state with error: $current_error, heuristic: $current_heuristic")
 
-        stack = @timeit to "expand_frwd" expand_frwd(sm, calc_func, calc_func_partial, data_model, stack, closed_list, (I3, I2, I1), confidence, num_samples)
+        stack = @timeit to "expand_frwd" expand_frwd(sm, stack, closed_list, (I3, I2, I1), heuristic_fun)
     end
 
     println("Stack is empty")
@@ -116,30 +113,30 @@ end
 
 
 
-function expand_frwd(sm::Subset_minimal, calc_func::Function, calc_func_partial::Function, data_model, stack, closed_list, (I3, I2, I1), confidence, num_samples)
+function expand_frwd(sm::Subset_minimal, stack, closed_list, (I3, I2, I1), heuristic_fun)
     if I3 !== nothing
         for i in setdiff(1:784, I3)
-            new_subsets = (push(I3, i), I2, I1)
-            new_heuristic, new_error = @timeit to "heuristic"  heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, data_model, num_samples)
-            if new_subsets ∉ closed_list
-                push!(stack, (new_heuristic, new_error, new_subsets))    
+            new_subset = (push(I3, i), I2, I1)
+            if new_subset ∉ closed_list
+                new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
+                push!(stack, (new_heuristic, new_error, new_subset))    
             end
         end
     end
     if I2 !== nothing
         for i in setdiff(1:256, I2)
-            new_subsets = (I3, push(I2, i), I1)
-            new_heuristic, new_error = @timeit to "heuristic"  heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, data_model, num_samples)
-            if new_subsets ∉ closed_list
-                push!(stack, (new_heuristic, new_error, new_subsets))
+            new_subset = (I3, push(I2, i), I1)
+            if new_subset ∉ closed_list
+                new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
+                push!(stack, (new_heuristic, new_error, new_subset))
             end
         end
     end
     if I1 !== nothing
         for i in setdiff(1:256, I1)
-            new_subsets = (I3, I2, push(I1, i))
-            new_heuristic, new_error = @timeit to "heuristic" heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, data_model, num_samples)
+            new_subset = (I3, I2, push(I1, i))
             if new_subsets ∉ closed_list
+                new_heuristic, new_error = @timeit to "heuristic" heuristic_fun(new_subset)
                 push!(stack, (new_heuristic, new_error, new_subsets))
             end
         end

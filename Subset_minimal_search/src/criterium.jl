@@ -6,16 +6,14 @@
     x
 end
 
-function ep_score(logits, y)
+function ep_score(logits, y::Integer)
     logŷ = softmax(logits)
     mean(logŷ[y,:])
 end
 
-sum_equal(ŷ, y) = sum(==(y), ŷ)
-
-function sdp_score(logits, y)
+function sdp_score(logits, y::Integer)
     ŷ =  Flux.onecold(logits)
-    sum_equal(ŷ, y) / length(ŷ)
+    sum(==(y), ŷ) / length(ŷ)
 end
 
 """ SDP and EP criteria for evaluating subset(ii) robustness """

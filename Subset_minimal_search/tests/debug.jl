@@ -1,7 +1,7 @@
 # srun -p gpufast --gres=gpu:1  --mem=16000  --pty bash -i
 # cd julia/Pkg/Subset_minimal_search/tests/
 #  ~/.juliaup/bin/julia --project=..
-using CUDA
+# using CUDA
 using Subset_minimal_search
 import Subset_minimal_search as SMS
 using Subset_minimal_search.Flux
@@ -11,7 +11,6 @@ using Subset_minimal_search.StaticBitSets
 using Subset_minimal_search.TimerOutputs
 using Serialization
 using Subset_minimal_search.Makie
-using ProfileCanvas, TimerOutputs
 const to = Subset_minimal_search.to
 # using Subset_minimal_search.Makie.Colors
 # using Subset_minimal_search.Serialization
@@ -19,8 +18,8 @@ const to = Subset_minimal_search.to
 # using Subset_minimal_search.Distributions
 # using Subset_minimal_search.Serialization
 
-to_gpu = gpu
-# to_gpu = cpu
+# to_gpu = gpu
+to_gpu = cpu
 
 """ Usual nn """
 model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
@@ -53,6 +52,12 @@ sm = SMS.Subset_minimal(model, xₛ, yₛ)
 function init_sbitset(n::Int) 
     N = ceil(Int, n / 64)
     SBitSet{N, UInt64}()
+end
+
+isvalid_sdp(ii, sm, ϵ, num_samples, sampler) = criterium_sdp(sm.input, sm.input, sm.output, ii, sampler, num_samples) < ϵ
+
+function heuristic_sdp(ii, sm, ϵ, num_samples, sampler)
+    SMS.heuristic(sm, SMS.criterium_sdp, SMS.sdp_partial, ii, 1 - ϵ, sampler, num_samples)
 end
 
 r = SMS.BernoulliMixture(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls")))
@@ -88,14 +93,20 @@ reset_timer!(to)
 
 #1. Initialize starting subsets
 I3, I2, I1 = (init_sbitset(784), nothing, nothing)
-
+ϵ = 0.9
 #2. Search
 """ Prepare image and label """
 img_i = 1
 xₛ = train_X_bin_neg[:, img_i] |> to_gpu
 yₛ = argmax(model(xₛ))
 sm = SMS.Subset_minimal(model, xₛ, yₛ)
-I3, I2, I1 = (init_sbitset(784), nothing, nothing)
 
-t = @elapsed solution_subsets = forward_search(sm, (I3, I2, I1), criterium_sdp; calc_func=criterium_sdp, calc_func_partial=sdp_partial, data_model=nothing, threshold_total_err=0.1, num_samples=10000, terminate_on_first_solution=true)
+II = (init_sbitset(784), nothing, nothing)
 
+t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, 10000, nothing),  ii -> heuristic_sdp(ii, sm, ϵ, 10000, nothing))
+
+
+# Let's try more abstract API
+heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, data_model, num_samples)
+
+isvalid(valid_criterium, current_error, 0)
