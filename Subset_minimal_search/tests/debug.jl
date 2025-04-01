@@ -1,3 +1,6 @@
+# srun -p gpufast --gres=gpu:1  --mem=16000  --pty bash -i
+# cd julia/Pkg/Subset_minimal_search/tests/
+#  ~/.juliaup/bin/julia --project=..
 using CUDA
 using Subset_minimal_search
 import Subset_minimal_search as SMS
@@ -16,10 +19,12 @@ const to = Subset_minimal_search.to
 # using Subset_minimal_search.Distributions
 # using Subset_minimal_search.Serialization
 
+to_gpu = gpu
+# to_gpu = cpu
 
 """ Usual nn """
 model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
-model = deserialize(model_path)
+model = deserialize(model_path) |> to_gpu;
 
 """ nn for MILP search """
 # nn = Chain(Dense(28^2, 28, relu), Dense(28,28, relu), Dense(28,10)) 
@@ -39,13 +44,10 @@ test_X_bin_neg = preprocess_bin_neg(test_X_binary)
 train_y = SMS.onehot_labels(train_y)
 test_y = SMS.onehot_labels(test_y)
 
-
-to_gpu = gpu
-to_gpu = cpu
 """ Prepare image and label """
 xₛ = train_X_bin_neg[:, 1] |> to_gpu
 yₛ = argmax(train_y[:, 1]) - 1
-sm = SMS.Subset_minimal(to_gpu(model), xₛ, yₛ)
+sm = SMS.Subset_minimal(model, xₛ, yₛ)
 
 
 function init_sbitset(n::Int) 
@@ -89,9 +91,10 @@ I3, I2, I1 = (init_sbitset(784), nothing, nothing)
 
 #2. Search
 """ Prepare image and label """
+img_i = 1
 xₛ = train_X_bin_neg[:, img_i] |> to_gpu
 yₛ = argmax(model(xₛ))
-sm = SMS.Subset_minimal(to_gpu(model), xₛ, yₛ)
+sm = SMS.Subset_minimal(model, xₛ, yₛ)
 I3, I2, I1 = (init_sbitset(784), nothing, nothing)
 
 t = @elapsed solution_subsets = forward_search(sm, (I3, I2, I1), criterium_sdp; calc_func=criterium_sdp, calc_func_partial=sdp_partial, data_model=nothing, threshold_total_err=0.1, num_samples=10000, terminate_on_first_solution=true)

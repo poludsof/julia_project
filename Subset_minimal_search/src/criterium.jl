@@ -6,27 +6,38 @@
     x
 end
 
+function ep_score(logits, y)
+    logŷ = softmax(logits)
+    mean(logŷ[y,:])
+end
+
+sum_equal(ŷ, y) = sum(==(y), ŷ)
+
+function sdp_score(logits, y)
+    ŷ =  Flux.onecold(logits)
+    sum_equal(ŷ, y) / length(ŷ)
+end
+
 """ SDP and EP criteria for evaluating subset(ii) robustness """
 
 function criterium_ep(model, img, y, ii, data_model, num_samples)
     x = uniform_distribution(img, ii, num_samples)
-    logŷ =  Array(softmax(model(x)))
-    mean(ŷᵢ == y for logŷ in ŷ)
+    ep_score(model(x), y)
 end
 
 criterium_ep(model, img, y, ii::Nothing, data_model, num_samples) = 1
 
 function criterium_sdp(model, img, y, ii, data_model::Nothing, num_samples)
     x = uniform_distribution(img, ii, num_samples)
-    ŷ =  Array(Flux.onecold(model(x)))
-    mean(ŷᵢ == y for ŷᵢ in ŷ)
+    sdp_score(model(x), y)
 end
+
 
 criterium_sdp(model, img, y, ii::Nothing, data_model::Nothing, num_samples) = 1
 
 function criterium_sdp(model, img, y, ii, data_model, num_samples)
     x = data_distribution(img, ii, data_model, num_samples)
-    mean(Flux.onecold(model(x)) .== Flux.onecold(model(img)))
+    sdp_score(model(x), y)
 end
 
 criterium_sdp(model, img, y, ii::Nothing, data_model, num_samples) = 1
@@ -38,7 +49,7 @@ function sdp_partial(model, img, y, ii, jj, data_model, num_samples)
     isempty(ii) && return(0.0)
     jj = collect(jj)
     x = uniform_distribution(img, ii, num_samples)
-    mean(model(x)[jj, :] .== model(img)[jj, :])
+    sdp_score(model(x), y)
 end
 
 sdp_partial(model, img, y, ii, jj::Nothing, data_model, num_samples) = 1
@@ -52,5 +63,5 @@ function ep_partial(model, img, y, ii, jj, data_model, num_samples)
     isempty(ii) && return(0.0)
     jj = collect(jj)
     x = uniform_distribution(img, ii, num_samples)
-    # mean(Flux.softmax(model(x))[jj, :] .== Flux.softmax(model(img))[jj, :])
+    ep_score(model(x), y)
 end

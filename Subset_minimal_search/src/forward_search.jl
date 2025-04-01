@@ -107,7 +107,7 @@ function forward_search(sm::Subset_minimal, (I3, I2, I1), valid_criterium::Funct
 
         println("step: $steps, length $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) Expanding state with error: $current_error, heuristic: $current_heuristic")
 
-        stack = @timeit to "expand_frwd"  expand_frwd(sm, calc_func, calc_func_partial, data_model, stack, closed_list, (I3, I2, I1), confidence, num_samples)
+        stack = @timeit to "expand_frwd" expand_frwd(sm, calc_func, calc_func_partial, data_model, stack, closed_list, (I3, I2, I1), confidence, num_samples)
     end
 
     println("Stack is empty")
