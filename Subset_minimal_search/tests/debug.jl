@@ -1,7 +1,9 @@
 # srun -p gpufast --gres=gpu:1  --mem=16000  --pty bash -i
 # cd julia/Pkg/Subset_minimal_search/tests/
-#  ~/.juliaup/bin/julia --project=..
-# using CUDA
+#  ~/.juliaup/bin/julia --project=.
+using Revise
+using ProfileCanvas, BenchmarkTools
+using CUDA
 using Subset_minimal_search
 import Subset_minimal_search as SMS
 using Subset_minimal_search.Flux
@@ -18,15 +20,16 @@ const to = Subset_minimal_search.to
 # using Subset_minimal_search.Distributions
 # using Subset_minimal_search.Serialization
 
-# to_gpu = gpu
-to_gpu = cpu
+to_gpu = gpu
+# to_gpu = cpu
 
 """ Usual nn """
 model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
 model = deserialize(model_path) |> to_gpu;
 
 """ nn for MILP search """
-# nn = Chain(Dense(28^2, 28, relu), Dense(28,28, relu), Dense(28,10)) 
+# nn = Chain
+# (Dense(28^2, 28, relu), Dense(28,28, relu), Dense(28,10)) 
 # nn = train_nn(nn, train_X_bin_neg, train_y, test_X_bin_neg, test_y)
 
 
@@ -54,10 +57,21 @@ function init_sbitset(n::Int)
     SBitSet{N, UInt64}()
 end
 
-isvalid_sdp(ii, sm, ϵ, num_samples, sampler) = criterium_sdp(sm.input, sm.input, sm.output, ii, sampler, num_samples) < ϵ
+function init_full_sbitset(n::Int) 
+    N = ceil(Int, n / 64)
+    x = SBitSet{N, UInt64}()
+    for i in 1:n
+        x = push(x, i)
+    end
+    x
+end
+
+function isvalid_sdp(ii::Tuple, sm, ϵ, num_samples, sampler) 
+    criterium_sdp(sm.nn, sm.input, sm.output, ii[1], sampler, num_samples) > ϵ
+end
 
 function heuristic_sdp(ii, sm, ϵ, num_samples, sampler)
-    SMS.heuristic(sm, SMS.criterium_sdp, SMS.sdp_partial, ii, 1 - ϵ, sampler, num_samples)
+    SMS.heuristic(sm, SMS.criterium_sdp, SMS.sdp_partial, ii, ϵ, sampler, num_samples)
 end
 
 r = SMS.BernoulliMixture(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls")))
@@ -92,7 +106,8 @@ r = SMS.BernoulliMixture(deserialize(joinpath(@__DIR__, "..", "models", "milan_c
 reset_timer!(to)
 
 #1. Initialize starting subsets
-I3, I2, I1 = (init_sbitset(784), nothing, nothing)
+II = (init_full_sbitset(784), nothing, nothing)
+II = (init_sbitset(784), nothing, nothing)
 ϵ = 0.9
 #2. Search
 """ Prepare image and label """
@@ -101,12 +116,5 @@ xₛ = train_X_bin_neg[:, img_i] |> to_gpu
 yₛ = argmax(model(xₛ))
 sm = SMS.Subset_minimal(model, xₛ, yₛ)
 
-II = (init_sbitset(784), nothing, nothing)
 
-t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, 10000, nothing),  ii -> heuristic_sdp(ii, sm, ϵ, 10000, nothing))
-
-
-# Let's try more abstract API
-heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, data_model, num_samples)
-
-isvalid(valid_criterium, current_error, 0)
+t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, 10000, nothing),  ii -> heuristic_sdp(ii, sm, ϵ, 1000, nothing))
