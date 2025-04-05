@@ -74,7 +74,7 @@ function heuristic_sdp(ii, sm, ϵ, sampler, num_samples, verbose = false)
 end
 
 sampler = UniformDistribution()
-# sampler = BernoulliMixture(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls")))
+# sampler = BernoulliMixture(to_gpu(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls"))))
 
 #test
 # ii = init_sbitset(784)
@@ -105,9 +105,38 @@ sampler = UniformDistribution()
 
 reset_timer!(to)
 
-#1. Initialize starting subsets
-II = (init_sbitset(784), nothing, nothing)
-# II = (init_sbitset(784, 64), nothing, nothing)
+#1. Initialization
+# II = (init_sbitset(784), nothing, nothing)
+# # For tuple, we need to define appropriate heuristics which understand tuples
+function isvalid_sdp(ii::Tuple, sm, ϵ, sampler, num_samples, verbose = false)
+    acc = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii[1], sampler, num_samples)
+    verbose && println("accuracy  = ",acc , " threshold = ", ϵ)
+    acc > ϵ
+end
+
+function heuristic_sdp(ii::Tuple, sm, ϵ, sampler, num_samples, verbose = false)
+    h = SMS.heuristic(sm, SMS.criterium_sdp, SMS.sdp_partial, ii, ϵ, sampler, num_samples)
+    verbose && println("heuristic = ",h)
+    h
+end
+
+
+II = init_sbitset(length(xₛ))
+
+function isvalid_sdp(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
+    acc = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
+    verbose && println("accuracy  = ",acc , " threshold = ", ϵ)
+    acc > ϵ
+end
+
+function heuristic_sdp(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
+    h = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
+    h = ϵ - h
+    verbose && println("heuristic = ",h)
+    (;hsum = h, hmax = h)
+end
+
+
 ϵ = 0.99
 #2. Search
 """ Prepare image and label """
@@ -116,5 +145,29 @@ xₛ = train_X_bin_neg[:, img_i] |> to_gpu
 yₛ = argmax(model(xₛ))
 sm = SMS.Subset_minimal(model, xₛ, yₛ)
 
-
 t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ii -> heuristic_sdp(ii, sm, ϵ, sampler, 10000))
+
+
+# verification checks
+function test_samplers()    
+    using Test
+    xₛ = train_X_bin_neg[:, 1]
+
+    ii = init_sbitset(784, 64)
+    vii = collect(ii)
+    cii = setdiff(1:length(xₛ), ii)
+
+    sampler_gpu = BernoulliMixture(to_gpu(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls"))))
+    sampler_cpu = BernoulliMixture(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls")))
+
+    r_cpu = SMS.condition(sampler_cpu, cpu(xₛ), ii)
+    r_gpu = SMS.condition(sampler_gpu, cu(xₛ), ii)
+
+    for xx in [cpu(SMS.sample_all(r_cpu, 10_000)),cpu(SMS.sample_all(r_gpu, 10_000))]
+        @test all(xx .!= 0)
+        @test all(map(∈((-1,+1)), xx))
+        @test all(xx[vii,:] .== xₛ[vii])
+    end
+
+    mean(xx[cii,:], dims =2 )
+end
