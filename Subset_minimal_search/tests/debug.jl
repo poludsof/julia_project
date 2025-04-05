@@ -51,30 +51,30 @@ xₛ = train_X_bin_neg[:, 1] |> to_gpu
 yₛ = argmax(train_y[:, 1]) - 1
 sm = SMS.Subset_minimal(model, xₛ, yₛ)
 
-
-function init_sbitset(n::Int) 
-    N = ceil(Int, n / 64)
-    SBitSet{N, UInt64}()
-end
-
-function init_full_sbitset(n::Int) 
+function init_sbitset(n::Int, k = 0) 
     N = ceil(Int, n / 64)
     x = SBitSet{N, UInt64}()
-    for i in 1:n
+    k == 0 && return(x)
+    for i in rand(1:n, k)
         x = push(x, i)
     end
     x
 end
 
-function isvalid_sdp(ii::Tuple, sm, ϵ, num_samples, sampler) 
-    criterium_sdp(sm.nn, sm.input, sm.output, ii[1], sampler, num_samples) > ϵ
+function isvalid_sdp(ii::Tuple, sm, ϵ, sampler, num_samples, verbose = false)
+    acc = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii[1], sampler, num_samples)
+    verbose && println("accuracy  = ",acc , " threshold = ", ϵ)
+    acc > ϵ
 end
 
-function heuristic_sdp(ii, sm, ϵ, num_samples, sampler)
-    SMS.heuristic(sm, SMS.criterium_sdp, SMS.sdp_partial, ii, ϵ, sampler, num_samples)
+function heuristic_sdp(ii, sm, ϵ, sampler, num_samples, verbose = false)
+    h = SMS.heuristic(sm, SMS.criterium_sdp, SMS.sdp_partial, ii, ϵ, sampler, num_samples)
+    verbose && println("heuristic = ",h)
+    h
 end
 
-r = SMS.BernoulliMixture(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls")))
+sampler = UniformDistribution()
+# sampler = BernoulliMixture(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls")))
 
 #test
 # ii = init_sbitset(784)
@@ -106,9 +106,9 @@ r = SMS.BernoulliMixture(deserialize(joinpath(@__DIR__, "..", "models", "milan_c
 reset_timer!(to)
 
 #1. Initialize starting subsets
-II = (init_full_sbitset(784), nothing, nothing)
 II = (init_sbitset(784), nothing, nothing)
-ϵ = 0.9
+# II = (init_sbitset(784, 64), nothing, nothing)
+ϵ = 0.99
 #2. Search
 """ Prepare image and label """
 img_i = 1
@@ -117,4 +117,4 @@ yₛ = argmax(model(xₛ))
 sm = SMS.Subset_minimal(model, xₛ, yₛ)
 
 
-t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, 10000, nothing),  ii -> heuristic_sdp(ii, sm, ϵ, 1000, nothing))
+t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ii -> heuristic_sdp(ii, sm, ϵ, sampler, 10000))

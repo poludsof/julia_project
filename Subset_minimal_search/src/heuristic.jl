@@ -1,13 +1,11 @@
-
-function uniform_distribution(img, ii, num_samples)
-    sample_input(img, ii, num_samples)
+@inline function uniform_distribution(img::AbstractVector, ii::SBitSet, num_samples::Integer)
+    ii = collect(ii)
+    x = rand(eltype(img), length(img), num_samples)
+    map!(x -> 2*round(x) - 1, x, x)
+    x[ii,:] .= img[ii]
+    x
 end
 
-function data_distribution(img, ii, data_model, num_samples)
-    r = data_model
-    r = condition(r, img, ii)
-    sample_all(r, num_samples)
-end
 
 function mi_distribution(sm::Subset_minimal, ii, num_samples)
     #todo

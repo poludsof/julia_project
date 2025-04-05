@@ -42,7 +42,7 @@ function one_subset_forward_search(sm::Subset_minimal, calc_func::Function; data
             expand!(sm, calc_func, data_model, open_list, close_list, current_subset, num_samples)
         end
 
-        push!(close_list, current_subset)
+        # println("Current subset: ", current_subset, " score: ", score)
     end
 
     return solutions
@@ -104,6 +104,7 @@ function forward_search(sm::Subset_minimal, (I3, I2, I1), isvalid::Function, heu
 
         println("step: $steps, length $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) Expanding state with error: $current_error, heuristic: $current_heuristic")
 
+        # steps > 2 && return(solutions)
         stack = @timeit to "expand_frwd" expand_frwd(sm, stack, closed_list, (I3, I2, I1), heuristic_fun)
     end
 

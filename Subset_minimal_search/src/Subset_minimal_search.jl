@@ -39,7 +39,10 @@ include("backward_search.jl")
 include("beam_search.jl")
 include("dataset_prep.jl")
 include("heuristic.jl")
-include("mixture_sampler.jl")
+include("samplers/uniform_sampler.jl")
+export UniformDistribution
+include("samplers/mixture_sampler.jl")
+export BernoulliMixture
 
 include("tmp_bcw.jl")
 include("tmp_one_search_for_all.jl")
