@@ -21,13 +21,12 @@ end
 ##############
 #   This implements sampling from conditioned bernoulli
 ##############
-function Subset_minimal_search.condition(r::BernoulliMixture, xₛ::CuVector, mask::Vector{Bool})
+function Subset_minimal_search.condition(r::BernoulliMixture{<:Any,<:CuArray,<:CuMatrix}, xₛ::CuVector, mask::AbstractVector{Bool})
     mask = cu(mask)
-    log_p = cu(r.log_p)
-    _xₛ = vcat(1 .- xₛ', xₛ')
-    pzx = softmax(vec(sum(mask' .* _xₛ .* log_p, dims = (1,2))))
+    _xₛ = vcat((xₛ .≤ 0)', (xₛ .> 0)')
+    pzx = softmax(vec(sum(mask' .* _xₛ .* r.log_p, dims = (1,2))))
     w = StatsBase.Weights(Vector(pzx))
-    ConditionedBernoulliMixture(r, mask, [], w, xₛ)
+    ConditionedBernoulliMixture(r, mask, w, xₛ)
 end
 
 function sample_all(r::ConditionedBernoulliMixture, n)

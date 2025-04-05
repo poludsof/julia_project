@@ -37,11 +37,11 @@ function condition(r::BernoulliMixture, xₛ, known_ii::SBitSet)
     for i in known_ii
         mask[i] = true
     end
-    condition(r, [xᵢ >0 for xᵢ in xₛ], mask)
+    condition(r, xₛ, mask)
 end
 
 function condition(r::BernoulliMixture, xₛ, mask::Vector{Bool})
-    _xₛ = vcat(1 .- xₛ', xₛ')
+    _xₛ = vcat((xₛ .≤ 0)', (xₛ .> 0)')
     pzx = softmax(vec(sum(mask' .* _xₛ .* r.log_p, dims = (1,2))))
     w = StatsBase.Weights(pzx)
     ConditionedBernoulliMixture(r, xₛ, mask, w)
