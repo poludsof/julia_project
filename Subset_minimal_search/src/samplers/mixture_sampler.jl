@@ -71,7 +71,7 @@ function sample_all!(u, r::ConditionedBernoulliMixture)
     for col in axes(u, 2)
         cid = sample(r.w)
         for row in axes(u, 1)
-            u[row, col] = mask[row] ? r.xₛ[row] : (rand() < p[row, cid])
+            u[row, col] = mask[row] ? r.xₛ[row] : 2*(rand() < p[row, cid]) - 1
         end
     end
     u

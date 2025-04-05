@@ -95,6 +95,7 @@ function forward_search(sm::Subset_minimal, (I3, I2, I1), isvalid::Function, heu
         closed_list = push!(closed_list, (I3, I2, I1))
         
         v = @timeit to "isvalid" isvalid((I3, I2, I1))
+        println("valid value ", v)
 
         if v
             println("Valid subset found: $((I3 === nothing ? 0 : length(I3), I2 === nothing ? 0 : length(I2), I1 === nothing ? 0 : length(I1))) with error: ", current_error)
