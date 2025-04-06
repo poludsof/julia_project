@@ -32,6 +32,7 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
             println("Valid subset found: $(solution_length(ii)) with error: ", current_error)
             terminate_on_first_solution && return(ii)
             push!(solutions, ii)
+            continue
         end
 
         println("step: $steps, length $(solution_length(ii)) Expanding state with error: $current_error, heuristic: $current_heuristic")

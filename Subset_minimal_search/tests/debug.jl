@@ -200,6 +200,7 @@ sm = SMS.Subset_minimal(model, xₛ, yₛ)
 t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ShapleyHeuristic(sm, sampler, 10000))
 t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_ep(ii, sm, ϵ, sampler, 10000),  ShapleyHeuristic(sm, sampler, 10000))
 t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ii -> heuristic_sdp(ii, sm, ϵ, sampler, 10000))
+t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_ep(ii, sm, ϵ, sampler, 10000),  ii -> heuristic_ep(ii, sm, ϵ, sampler, 10000))
 
 
 # verification checks
