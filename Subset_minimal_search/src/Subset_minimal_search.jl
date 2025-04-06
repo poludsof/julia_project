@@ -20,11 +20,14 @@ using Distributions
 
 const to = TimerOutput()
 
-struct Subset_minimal{NN, I, O}
+struct Subset_minimal{NN, I, O, ID}
     nn::NN
     input::I
     output::O
+    dims::ID
 end
+
+Subset_minimal(nn, input, output) = Subset_minimal(nn, input, output, length(input))
 
 
 include("mnist_training.jl")

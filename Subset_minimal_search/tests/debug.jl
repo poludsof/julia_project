@@ -61,18 +61,6 @@ function init_sbitset(n::Int, k = 0)
     x
 end
 
-function isvalid_sdp(ii::Tuple, sm, ϵ, sampler, num_samples, verbose = false)
-    acc = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii[1], sampler, num_samples)
-    verbose && println("accuracy  = ",acc , " threshold = ", ϵ)
-    acc > ϵ
-end
-
-function heuristic_sdp(ii, sm, ϵ, sampler, num_samples, verbose = false)
-    h = SMS.heuristic(sm, SMS.criterium_sdp, SMS.sdp_partial, ii, ϵ, sampler, num_samples)
-    verbose && println("heuristic = ",h)
-    h
-end
-
 sampler = UniformDistribution()
 # sampler = BernoulliMixture(to_gpu(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls"))))
 
@@ -107,7 +95,7 @@ reset_timer!(to)
 
 #1. Initialization
 # II = (init_sbitset(784), nothing, nothing)
-# # For tuple, we need to define appropriate heuristics which understand tuples
+# For tuple, we need to define appropriate heuristics which understand tuples
 function isvalid_sdp(ii::Tuple, sm, ϵ, sampler, num_samples, verbose = false)
     acc = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii[1], sampler, num_samples)
     verbose && println("accuracy  = ",acc , " threshold = ", ϵ)
@@ -121,7 +109,7 @@ function heuristic_sdp(ii::Tuple, sm, ϵ, sampler, num_samples, verbose = false)
 end
 
 
-II = init_sbitset(length(xₛ))
+# For tuple, we need to define appropriate heuristics which understand tuples
 
 function isvalid_sdp(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
     acc = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
@@ -136,6 +124,63 @@ function heuristic_sdp(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = fals
     (;hsum = h, hmax = h)
 end
 
+function isvalid_ep(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
+    acc = SMS.criterium_ep(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
+    verbose && println("accuracy  = ",acc , " threshold = ", ϵ)
+    acc > ϵ
+end
+
+function heuristic_ep(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
+    h = SMS.criterium_ep(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
+    h = ϵ - h
+    verbose && println("heuristic = ",h)
+    (;hsum = h, hmax = h)
+end
+
+function shapley_heuristic(ii::SBitSet, sm, sampler, num_samples, verbose = false)
+    r = SMS.condition(sampler, sm.input, ii)
+    x = SMS.sample_all(r, num_samples)
+    y = Flux.onecold(sm.nn(x)) .== sm.output
+
+    # For us, the DAF statistic is a difference in errors when the feature is correct and wrong
+    n = sum(x .== xₛ, dims = 2)
+    # n₊ = sum(x .== 1, dims = 2)
+    # n₋ = size(x,2) .- n₊
+
+    # compute, how many +1 are correct
+    _f(xᵢ, xₛᵢ, yᵢ) = xᵢ == xₛᵢ ? yᵢ : false
+    c = sum(_f.(x, xₛ, y'), dims = 2)
+
+    cpu(c ./ max.(1, n))
+end
+
+struct ShapleyHeuristic{S,SM}
+    sm::SM
+    sampler::S
+    num_samples::Int
+    verbose::Bool
+end
+
+function ShapleyHeuristic(sm, sampler, num_samples, verbose = false)
+    ShapleyHeuristic(sampler, sm, num_samples, verbose)
+end
+
+(sp::ShapleyHeuristic)(ii) = heuristic_sdp(ii, sm, 0.99, sampler, 10000)
+
+function Subset_minimal_search.expand_frwd(sm::Subset_minimal_search.Subset_minimal, stack, closed_list, ii::SBitSet, heuristic_fun::ShapleyHeuristic)
+    sp = heuristic_fun
+    acc = @timeit to "heuristic" shapley_heuristic(ii, sp.sm, sp.sampler, sp.num_samples, sp.verbose)
+    for i in setdiff(1:sm.dims, ii)
+        new_subset = push(ii, i)
+        if new_subset ∉ closed_list
+            new_error = 1 -acc[i]
+            push!(stack, (new_error, new_error, new_subset))
+        end
+    end
+    stack
+end
+
+
 
 ϵ = 0.99
 #2. Search
@@ -143,8 +188,17 @@ end
 img_i = 1
 xₛ = train_X_bin_neg[:, img_i] |> to_gpu
 yₛ = argmax(model(xₛ))
+
+# variant with triplets
+# II = (init_sbitset(784), nothing, nothing)
+# sm = SMS.Subset_minimal(model, xₛ, yₛ, (784, 256, 256))
+
+# variant with just input
+II = init_sbitset(length(xₛ))
 sm = SMS.Subset_minimal(model, xₛ, yₛ)
 
+t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ShapleyHeuristic(sm, sampler, 10000))
+t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_ep(ii, sm, ϵ, sampler, 10000),  ShapleyHeuristic(sm, sampler, 10000))
 t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ii -> heuristic_sdp(ii, sm, ϵ, sampler, 10000))
 
 

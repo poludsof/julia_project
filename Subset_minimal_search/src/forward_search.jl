@@ -48,43 +48,27 @@ solution_length(ii::Tuple) = solution_length.(ii)
 solution_length(ii::SBitSet) = length(ii)
 solution_length(::Nothing) = 0
 
-function expand_frwd(sm::Subset_minimal, stack, closed_list, (I3, I2, I1), heuristic_fun)
+new_subsets(ii::SBitSet, idim) = [push(ii, i) for i in setdiff(1:idim, ii)]
+
+function new_subsets((I3, I2, I1)::T, idims::Tuple) where {T<:Tuple}
+    new_subsets = T[]
     if I3 !== nothing
-        for i in setdiff(1:784, I3)
-            new_subset = (push(I3, i), I2, I1)
-            if new_subset ∉ closed_list
-                new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
-                push!(stack, (new_heuristic, new_error, new_subset))    
-            end
-        end
+        append!(new_subsets, [(push(I3, i), I2, I1) for i in setdiff(1:idims[1], I3)])
     end
     if I2 !== nothing
-        for i in setdiff(1:256, I2)
-            new_subset = (I3, push(I2, i), I1)
-            if new_subset ∉ closed_list
-                new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
-                push!(stack, (new_heuristic, new_error, new_subset))
-            end
-        end
+        append!(new_subsets, [(I3, push(I2, i), I1) for i in setdiff(1:idims[2], I2)])
     end
     if I1 !== nothing
-        for i in setdiff(1:256, I1)
-            new_subset = (I3, I2, push(I1, i))
-            if new_subsets ∉ closed_list
-                new_heuristic, new_error = @timeit to "heuristic" heuristic_fun(new_subset)
-                push!(stack, (new_heuristic, new_error, new_subsets))
-            end
-        end
+        append!(new_subsets, [(I3, I2, push(I1, i)) for i in setdiff(1:idims[3], I1)])
     end
-    stack
+    new_subsets
 end
 
-function expand_frwd(sm::Subset_minimal, stack, closed_list, ii::SBitSet, heuristic_fun)
-    for i in setdiff(1:length(sm.input), ii)
-        iiᵢ = push(ii, i)
-        if iiᵢ ∉ closed_list
-            new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(iiᵢ)
-            push!(stack, (new_heuristic, new_error, iiᵢ))    
+function expand_frwd(sm::Subset_minimal, stack, closed_list, ii, heuristic_fun)
+    for new_subset in new_subsets(ii, sm.dims)
+        if new_subset ∉ closed_list
+            new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
+            push!(stack, (new_heuristic, new_error, new_subset))    
         end
     end
     stack
