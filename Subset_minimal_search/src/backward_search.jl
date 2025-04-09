@@ -1,69 +1,5 @@
 
-function one_subset_backward_search(sm::Subset_minimal, calc_func::Function; data_model=nothing, max_steps::Int=1000, threshold::Float64=0.9, num_samples::Int=1000, time_limit=Inf)
-    open_list = PriorityQueue{SBitSet{32, UInt32}, Float64}()
-    close_list = Set{SBitSet{32, UInt32}}()
-    min_solution = nothing
-
-    full_subset = SBitSet{32, UInt32}(collect(1:length(sm.input)))
-    initial_score = calc_func(sm.nn, sm.input, full_subset, num_samples)
-    enqueue!(open_list, full_subset, -initial_score)
-
-    start_time = time()
-
-    steps = 0
-    @timeit to "one-subset bcwd search" while !isempty(open_list)
-        steps += 1
-
-        if steps > max_steps && !isempty(min_solution)
-            break
-        end
-
-        if time() - start_time > time_limit
-            println("Timeout exceeded, returning last found solution")
-            return min_solution
-        end
-
-        current_subset, priority = peek(open_list)
-        score = -priority
-        current_subset = dequeue!(open_list)
-
-        if score ≥ threshold
-            # println("Solution found: score: ", score)
-            if min_solution === nothing || length(current_subset) < length(min_solution)
-                min_solution = current_subset
-                println("length of min solution: ", length(min_solution), " score: ", score)
-            end
-            expand_backward(sm, calc_func, data_model, open_list, close_list, current_subset, num_samples)
-        end
-
-        push!(close_list, current_subset)
-
-        # println("Length of open_list: ", length(open_list))
-    end
-    return min_solution
-end
-
-function expand_backward(sm::Subset_minimal, calc_func::Function, data_model, open_list::PriorityQueue{SBitSet{N, T}, Float64}, close_list::Set{SBitSet{N, T}}, subset::SBitSet{N, T}, num_samples) where {N, T}
-    for feature in collect(subset)
-        new_subset = SBitSet{32, UInt32}(setdiff(subset, SBitSet{32, UInt32}(feature)))
-        if new_subset ∈ close_list
-            continue
-        end
-
-        score = calc_func(sm.nn, sm.input, new_subset, data_model, num_samples)
-        if !haskey(open_list, new_subset)
-            enqueue!(open_list, new_subset, -score)
-        end
-
-        # while length(open_list) > 5000  # max size of priority queue (open_list)
-        #     dequeue!(open_list)
-        # end
-    end
-end
-
-
 function backward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true) where {TT}
-    println("II", ii)
     println("II length: ", solution_length(ii))
     initial_heuristic, full_error = heuristic_fun(ii)
     println("Initial error: ", full_error, " Initial heuristic: ", initial_heuristic)
@@ -92,14 +28,17 @@ function backward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristi
 
         v = @timeit to "isvalid" isvalid(ii)
 
-        if !v
+        if v  # until the first invalid subset is found
             println("Valid subset: $(solution_length(ii)) with error: ", current_error)
-            terminate_on_first_solution && return(ii)
+        else
+            println("terminate_on_first_solution")
+            terminate_on_first_solution && return(best_subsets)
         end
 
         println("step: $steps, length $(solution_length(ii)) Expanding state with error: $current_error, heuristic: $current_heuristic")
 
-        if solution_length(ii) < best_total_len
+        total_len = solution_length(ii)
+        if total_len < best_total_len
             best_subsets = ii
             best_total_len = total_len
         end
