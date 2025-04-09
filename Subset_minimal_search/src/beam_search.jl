@@ -1,73 +1,28 @@
+function beam_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fun;  beam_size=5, time_limit=Inf, terminate_on_first_solution=true) where {TT}
+    # stack with heuristic, error, ii
+    initial_heuristic, full_error = heuristic_fun(ii)
+    beam_sets = [initial_heuristic, full_error, ii]
+    closed_list = Set{TT}()
+    beam_set = expand_beam(sm, beam_set, closed_list, ii, heuristic_fun, beam_size)
 
-function search_best_subsets(sm::Subset_minimal, calc_func::Function, data_model, fix_inputs::SBitSet{N, T}, beam_size::Int, num_samples::Int, best_results=Array{Tuple{SBitSet{N, T}, Float32}, 1}()) where {N, T}
-    # Initialize the worst threshold based on the last element in best_results (or 0 if empty)
-    worst_threshold = isempty(best_results) ? 0.0 : best_results[end][2]
+end
 
-    for i in 1:length(sm.input)
-        if i in fix_inputs
-            continue # Skip fixed inputs
-        end
-
-        # Create a new subset by adding the current feature
-        new_set = union(fix_inputs, SBitSet{32, UInt32}(i))
-        score = calc_func(sm.nn, sm.input, new_set, data_model, num_samples) # Compute the score of the subset (ep/sdp)
-
-        if score >= worst_threshold
-            push!(best_results, (new_set, score))
-            if length(best_results) > beam_size
-                sort!(best_results, by=x->x[2], rev=true)
-                pop!(best_results)
-                worst_threshold = best_results[end][2]
+function expand_beam(sm::Subset_minimal, beam_sets, closed_list, ii, heuristic, beam_size)
+    new_beam_set = [1.0, 1.0, ii]
+    for new_subset in new_subsets(ii, sm.dims)
+        if new_subset ∉ closed_list
+            new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
+            push!(new_beam_set, (new_heuristic, new_error, new_subset))
+            if length(new_beam_set) > beam_size
+                sort!(new_beam_set, by=x->x[1]) # sort by heuristic
+                pop!(new_beam_set)
             end
         end
     end
-
-    return best_results
-end
-
-
-function expand_the_best_subsets(sm::Subset_minimal, calc_func::Function, data_model, best_sets::Array{Tuple{SBitSet{N,T}, Float32}}, beam_size::Int, num_samples::Int) where{N, T}
-    extended_subsets = search_best_subsets(sm, calc_func, data_model, best_sets[end][1], beam_size, num_samples)
-    pop!(best_sets)
-
-    for bs in best_sets
-        extended_subsets = search_best_subsets(sm, calc_func, data_model, bs[1], beam_size, num_samples, extended_subsets)
-    end
-
-    return extended_subsets
-end
+    new_beam_set
+end  
 
 
-function one_subset_beam_search(sm::Subset_minimal, calc_func::Function; data_model=nothing, threshold=0.9, beam_size=5, num_samples=100, time_limit=Inf)
-    first_best_beam = search_best_subsets(sm, calc_func, data_model, SBitSet{32, UInt32}(), beam_size, num_samples) # Initialize the first best beam
-    println("FIRST BEST SETS: ")
-    print_beam(first_best_beam)
-
-    # Create extended best sets
-    best_sets = expand_the_best_subsets(sm, calc_func, data_model, first_best_beam, beam_size, num_samples)
-    println("THE END of 0, best score: ", best_sets[1][2])
-
-    start_time = time() 
-
-    iter_count = 1
-    @timeit to "one-subset beam search" while best_sets[1][2] < threshold  # Continue until the criterium value meets the threshold
-        if time() - start_time > time_limit
-            println("TIMEOUT")
-            return best_sets
-        end
-        best_sets = expand_the_best_subsets(sm, calc_func, data_model, best_sets, beam_size, num_samples)
-        println("THE END of $iter_count, best score: ", best_sets[1][2])    
-        iter_count += 1    
-    end
-    print_beam(best_sets)
-
-    return best_sets
-end
-
-
-
-
-""" Beam search for all subsets(layers) """
 function beam_search(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function; data_model=nothing, error_threshold=0.1, beam_size=5, num_samples=100, time_limit=Inf)
     confidence = 1 - error_threshold
 
@@ -112,45 +67,29 @@ function expand_beam_subsets(sm::Subset_minimal, calc_func::Function, calc_func_
     return expanded_subsets
 end
 
+#todo Add all to new_subsets, evaluate all, choose beam_size best ones
 
-function search_for_best_expansion(sm::Subset_minimal, (I3, I2, I1), calc_func::Function, calc_func_partial::Function, data_model, confidence, best_results, beam_size::Int, num_samples::Int)
-    # best_results: is Array{Tuple{Tuple{typeof(I3), typeof(I2), typeof(I1)}, Float32}, 1}
-    # Initialize the worst threshold based on the last element in best_results (or 0 if empty)
-    worst_error = best_results === nothing ? 1.0 : best_results[end][2]
-    # println("Worst error: ", worst_error)
-
-    if best_results === nothing
-        best_results = Array{Tuple{Tuple{typeof(I3), typeof(I2), typeof(I1)}, Float32}, 1}()
-    end
-
+function new_subsets((I3, I2, I1)::T, idims::Tuple, heuristic_fun) where {T<:Tuple}
+    new_subsets = T[]
     if I3 !== nothing
-        for i in setdiff(1:784, I3)
-            new_subsets = (push(I3, i), I2, I1)
-            best_results, worst_error = push_and_pop(sm, calc_func, calc_func_partial, data_model, best_results, new_subsets, confidence, beam_size, num_samples, worst_error)
-        end
+        append!(new_subsets, [(push(I3, i), I2, I1) for i in setdiff(1:idims[1], I3)])
     end
     if I2 !== nothing
-        for i in setdiff(1:256, I2)
-            new_subsets = (I3, push(I2, i), I1)
-            best_results, worst_error = push_and_pop(sm, calc_func, calc_func_partial, data_model, best_results, new_subsets, confidence, beam_size, num_samples, worst_error)
-        end
+        append!(new_subsets, [(I3, push(I2, i), I1) for i in setdiff(1:idims[2], I2)])
     end
     if I1 !== nothing
-        for i in setdiff(1:256, I1)
-            new_subsets = (I3, I2, push(I1, i))
-            best_results, worst_error = push_and_pop(sm, calc_func, calc_func_partial, data_model, best_results, new_subsets, confidence, beam_size, num_samples, worst_error)
-        end
+        append!(new_subsets, [(I3, I2, push(I1, i)) for i in setdiff(1:idims[3], I1)])
     end
-    return best_results
+    new_subsets
 end
 
+function push_and_pop(heuristic_fun, best_results, new_subsets, beam_size, worst_error)
+    new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
 
-function push_and_pop(sm, calc_func, calc_func_partial, data_model, best_results, new_subsets, confidence, beam_size, num_samples, worst_error)
-    new_heuristic, new_error = heuristic(sm, calc_func, calc_func_partial, new_subsets, confidence, data_model, num_samples)
-    if isvalid(calc_func, new_error, worst_error)
+    if new_error < worst_error
         push!(best_results, (new_subsets, new_error))
         if length(best_results) > beam_size
-            sort!(best_results, by=x->x[2])
+            sort!(best_results, by=x->x[2]) # sort by error
             pop!(best_results)
             worst_error = best_results[end][2]
         end
