@@ -1,7 +1,7 @@
 """
 Forward search with priority queue based on criterion value for minimal subset search for the FiRST layer of a neural network.
 """
-function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true) where {TT}
+function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true, exclude_supersets = true, only_smaller = true) where {TT}
     initial_heuristic, full_error = heuristic_fun(ii)
     println("Initial error: ", full_error, " Initial heuristic: ", initial_heuristic)
 
@@ -10,8 +10,8 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
     solutions = Set{TT}()
 
     steps = 0
-    # max_steps = 100
     start_time = time()
+    smallest_solution = typemax(Int)
 
     @timeit to "forward search" while !isempty(stack)
 
@@ -25,12 +25,29 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
         sort!(stack, by = x -> -x[1])
         current_heuristic, current_error, ii = pop!(stack)
         closed_list = push!(closed_list, ii)
+
+        # Look only for strictly smaller solutions
+        if only_smaller
+            length(ii) ≥ smallest_solution && continue
+        end
+
+        # check if we have not find a solution, which is subset of solution we have find
+        if exclude_supersets
+            issub = @timeit to "issubset" any(Base.Fix1(issubset,ii), solutions)
+            issub && println("skipping superset")
+            issub && continue
+        end
+
         
         v = @timeit to "isvalid" isvalid(ii)
 
         if v
             println("Valid subset found: $(solution_length(ii)) with error: ", current_error)
             terminate_on_first_solution && return(ii)
+            if solution_length(ii) < smallest_solution
+                smallest_solution = solution_length(ii)
+                println("new smallest solution so far: ", ii)
+            end
             push!(solutions, ii)
             continue
         end

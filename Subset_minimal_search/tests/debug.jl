@@ -61,8 +61,8 @@ function init_sbitset(n::Int, k = 0)
     x
 end
 
-sampler = UniformDistribution()
-# sampler = BernoulliMixture(to_gpu(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls"))))
+# sampler = UniformDistribution()
+sampler = BernoulliMixture(to_gpu(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls"))))
 
 #test
 # ii = init_sbitset(784)
@@ -180,6 +180,7 @@ function Subset_minimal_search.expand_frwd(sm::Subset_minimal_search.Subset_mini
     stack
 end
 
+ serialize("/home/pevnytom/tmp/subsets.jls", (;solutions = collect(solution_subsets), x = Vector(xₛ)))
 
 
 ϵ = 0.99
@@ -197,10 +198,12 @@ yₛ = argmax(model(xₛ))
 II = init_sbitset(length(xₛ))
 sm = SMS.Subset_minimal(model, xₛ, yₛ)
 
-t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ShapleyHeuristic(sm, sampler, 10000))
 t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_ep(ii, sm, ϵ, sampler, 10000),  ShapleyHeuristic(sm, sampler, 10000))
-t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ii -> heuristic_sdp(ii, sm, ϵ, sampler, 10000))
-t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_ep(ii, sm, ϵ, sampler, 10000),  ii -> heuristic_ep(ii, sm, ϵ, sampler, 10000))
+# t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ii -> heuristic_sdp(ii, sm, ϵ, sampler, 10000))
+# t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_ep(ii, sm, ϵ, sampler, 10000),  ii -> heuristic_ep(ii, sm, ϵ, sampler, 10000))
+
+
+t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ShapleyHeuristic(sm, sampler, 10000); terminate_on_first_solution = false, exclude_supersets = true, only_smaller = false, time_limit = 300)
 
 
 # verification checks
