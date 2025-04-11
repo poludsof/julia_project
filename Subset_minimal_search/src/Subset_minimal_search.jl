@@ -42,7 +42,7 @@ include("backward_search.jl")
 include("beam_search.jl")
 include("dataset_prep.jl")
 include("heuristic.jl")
-include("samplers/uniform_sampler.jl")
+# include("samplers/uniform_sampler.jl")
 export UniformDistribution
 include("samplers/mixture_sampler.jl")
 export BernoulliMixture
@@ -52,7 +52,7 @@ include("tmp_one_search_for_all.jl")
 
 export one_subset_backward_search, one_subset_forward_search, one_subset_beam_search
 export preprocess_binary, preprocess_bin_neg 
-export forward_search, backward_search_error_priority, beam_search, backward_search_length_priority
+export forward_search, beam_search, backward_search
 export criterium_sdp, criterium_ep, sdp_partial, ep_partial
 export plot_mnist_image
 

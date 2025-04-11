@@ -51,7 +51,7 @@ function init_sbitset(n::Int)
     SBitSet{N, UInt64}()
 end
 
-r = SMS.BernoulliMixture(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls")))
+sampler = SMS.BernoulliMixture(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls")))
 
 #test
 # ii = init_sbitset(784)
@@ -94,15 +94,17 @@ for img_i in 1:100
     yₛ = argmax(model(xₛ))
     sm = SMS.Subset_minimal(to_gpu(model), xₛ, yₛ)
     I3, I2, I1 = (init_sbitset(784), nothing, nothing)
+end
 
+#new API
+t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ShapleyHeuristic(sm, sampler, 10000))
 
+ϵ = 0.5
+II = SBitSet{13, UInt64}(collect(1:700))
+t = @elapsed solution_subsets = backward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10),  ShapleyHeuristic(sm, sampler, 10), time_limit=60)
 
-solution_subsets = forward_search(sm, (I3, I2, I1), criterium_sdp; calc_func=criterium_sdp, calc_func_partial=sdp_partial, data_model=nothing, threshold_total_err=0.1, num_samples=10000, terminate_on_first_solution=true)
-#3. Backward search or refining subsets
-reduced_solution = backward_search_length_priority(sm, solution_subsets, criterium_sdp, sdp_partial; data_model=nothing, threshold=0.1, max_steps=100, num_samples=10000, time_limit=50)
-
-#4. Or beam search
-beam_solution = beam_search(sm, (I3, I2, I1), criterium_sdp, sdp_partial; data_model=r, error_threshold=0.1, beam_size=5, num_samples=1000)
+II = init_sbitset(length(xₛ))
+t = @elapsed solution_subsets = beam_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10),  ShapleyHeuristic(sm, sampler, 10), beam_size=5, time_limit=60)
 
 show(to)
 println(solution_subsets[1])

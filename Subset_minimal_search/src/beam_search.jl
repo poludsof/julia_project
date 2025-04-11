@@ -1,11 +1,13 @@
 function beam_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fun;  beam_size=5, time_limit=Inf, terminate_on_first_solution=true) where {TT}
     # stack with heuristic, error, ii
+    println("Beam search")
     initial_heuristic, full_error = heuristic_fun(ii)
-    beam_sets = [initial_heuristic, full_error, ii]
+    println("Initial heuristic: ", initial_heuristic)
+    beam_set = [(initial_heuristic, full_error, ii)]
     closed_list = Set{TT}()
     solutions = Set{TT}()
-    beam_set = expand_beam(sm, beam_set, closed_list, ii, heuristic_fun, beam_size)
-    print_beam(beam_set)
+    beam_set = expand_beam(sm, beam_set, closed_list, heuristic_fun, beam_size)
+    print_beam(beam_set, beam_size)
 
     start_time = time()
     iter_count = 1
@@ -21,9 +23,9 @@ function beam_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fu
             push!(solutions, beam_set[1][3])
         end
 
-        println("THE END of $iter_count, best score: ", best_sets[1][2])    
+        println("THE END of $iter_count, best error: ", beam_set[1][2])    
 
-        beam_set = expand_beam(sm, beam_set, closed_list, ii, heuristic_fun, beam_size)
+        beam_set = expand_beam(sm, beam_set, closed_list, heuristic_fun, beam_size)
         iter_count += 1
     end
 end
@@ -45,29 +47,37 @@ function new_subsets((I3, I2, I1)::T, idims::Tuple, heuristic_fun) where {T<:Tup
     if I1 !== nothing
         append!(new_subsets, [(I3, I2, push(I1, i)) for i in setdiff(1:idims[3], I1)])
     end
+    println("new subsets")
     new_subsets
 end
 
-function expand_beam(sm::Subset_minimal, beam_sets, closed_list, ii, heuristic, beam_size)
+function expand_beam(sm::Subset_minimal, beam_sets, closed_list, heuristic_fun, beam_size)
     new_beam_set = []
-    for new_subset in new_subsets(ii, sm.dims)
-        if new_subset ∉ closed_list
-            new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
-            push!(new_beam_set, (new_heuristic, new_error, new_subset))
-            if length(new_beam_set) > beam_size
-                sort!(new_beam_set, by=x->x[1]) # sort by heuristic
-                pop!(new_beam_set)
+    while !isempty(beam_sets)
+        current_heuristic, current_error, ii = pop!(beam_sets)
+        println("Current subset: ", ii, " heuristic: ", current_heuristic, " error: ", current_error)
+
+        for new_subset in new_subsets(ii, sm.dims)
+            if new_subset ∉ closed_list
+                new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
+                println("New subset: ", new_subset, " heuristic: ", new_heuristic, " error: ", new_error)
+                push!(new_beam_set, (new_heuristic, new_error, new_subset))
+                if length(new_beam_set) > beam_size
+                    sort!(new_beam_set, by=x->x[1]) # sort by heuristic
+                    pop!(new_beam_set)
+                end
             end
         end
     end
+    println("expand_beam - new beam set")
     new_beam_set
 end  
 
 
 # Helper functions
-function print_beam(sets)
-    println("Size of beam: ", length(sets))
+function print_beam(sets, beam_size)
+    println("Size of beam: ", beam_size)
     for s in sets
-        println("Set: ", s[1], " Score: ", s[2])
+        println("Set: ", s[3], " heuristic: ", s[1], " error: ", s[2])
     end
 end
