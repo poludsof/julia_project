@@ -13,6 +13,7 @@ function backward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristi
     steps = 0
     start_time = time()
 
+    println("Starting backward search...")
     @timeit to "backward(length) search" while !isempty(stack)
 
         steps += 1
@@ -22,13 +23,13 @@ function backward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristi
             return best_subsets
         end
 
-        sort!(stack, by = x -> -x[1]) # error_priority
+        sort!(stack, by = x -> -x[1]) # heuristic_priority
         current_heuristic, current_error, ii = pop!(stack)
         closed_list = push!(closed_list, ii)
 
         v = @timeit to "isvalid" isvalid(ii)
 
-        if v 
+        if v
             println("Valid subset: $(solution_length(ii)) with error: ", current_error)
         else  # until the first invalid subset is found
             println("terminate_on_first_solution")
@@ -44,6 +45,7 @@ function backward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristi
         end
 
         stack = @timeit to "expand_bcwd" expand_bcwd(sm, stack, closed_list, ii, heuristic_fun)
+        
     end
     println("Stack is empty")
     return best_subsets
@@ -53,9 +55,9 @@ solution_length(ii::Tuple) = solution_length.(ii)
 solution_length(ii::SBitSet) = length(ii)
 solution_length(::Nothing) = 0
 
-new_subsets(ii::SBitSet, idim) = [pop(ii, i) for i in 1:idim if i in ii]
+new_subsets_bcwd(ii::SBitSet, idim) = [pop(ii, i) for i in 1:idim if i in ii]
 
-function new_subsets((I3, I2, I1)::T, idims::Tuple) where {T<:Tuple}
+function new_subsets_bcwd((I3, I2, I1)::T, idims::Tuple) where {T<:Tuple}
     new_subsets = T[]
     if I3 !== nothing
         append!(new_subsets, [(pop(I3, i), I2, I1) for i in 1:idims[1] if i in I3])
@@ -70,7 +72,7 @@ function new_subsets((I3, I2, I1)::T, idims::Tuple) where {T<:Tuple}
 end
 
 function expand_bcwd(sm::Subset_minimal, stack, closed_list, ii, heuristic_fun)
-    for new_subset in new_subsets(ii, sm.dims)
+    for new_subset in new_subsets_bcwd(ii, sm.dims)
         if new_subset ∉ closed_list
             new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
             push!(stack, (new_heuristic, new_error, new_subset))    

@@ -1,7 +1,7 @@
 """
 Forward search with priority queue based on criterion value for minimal subset search for the FiRST layer of a neural network.
 """
-function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true, exclude_supersets = true, only_smaller = true) where {TT}
+function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true, exclude_supersets = true, only_smaller = true, refine_with_backward=true) where {TT}
     initial_heuristic, full_error = heuristic_fun(ii)
     println("Initial error: ", full_error, " Initial heuristic: ", initial_heuristic)
 
@@ -37,11 +37,17 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
             issub && println("skipping superset")
             issub && continue
         end
-
         
         v = @timeit to "isvalid" isvalid(ii)
 
         if v
+            if refine_with_backward
+                println("Valid subset found. Pruning with backward search...")
+                ii = backward_search(sm, ii, isvalid, heuristic_fun, time_limit=200, terminate_on_first_solution=false)
+                # ii = backward_search(sm, ii, backward_valid_func)
+                println("After pruning: ", ii)
+            end
+
             println("Valid subset found: $(solution_length(ii)) with error: ", current_error)
             terminate_on_first_solution && return(ii)
             if solution_length(ii) < smallest_solution
@@ -62,13 +68,14 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
     return solutions
 end
 
+
 solution_length(ii::Tuple) = solution_length.(ii)
 solution_length(ii::SBitSet) = length(ii)
 solution_length(::Nothing) = 0
 
-new_subsets(ii::SBitSet, idim) = [push(ii, i) for i in setdiff(1:idim, ii)]
+new_subsets_fwrd(ii::SBitSet, idim) = [push(ii, i) for i in setdiff(1:idim, ii)]
 
-function new_subsets((I3, I2, I1)::T, idims::Tuple) where {T<:Tuple}
+function new_subsets_fwrd((I3, I2, I1)::T, idims::Tuple) where {T<:Tuple}
     new_subsets = T[]
     if I3 !== nothing
         append!(new_subsets, [(push(I3, i), I2, I1) for i in setdiff(1:idims[1], I3)])
@@ -83,7 +90,7 @@ function new_subsets((I3, I2, I1)::T, idims::Tuple) where {T<:Tuple}
 end
 
 function expand_frwd(sm::Subset_minimal, stack, closed_list, ii, heuristic_fun)
-    for new_subset in new_subsets(ii, sm.dims)
+    for new_subset in new_subsets_fwrd(ii, sm.dims)
         if new_subset ∉ closed_list
             new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
             push!(stack, (new_heuristic, new_error, new_subset))    

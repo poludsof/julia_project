@@ -15,15 +15,17 @@ const to = Subset_minimal_search.to
 # using Subset_minimal_search.Distributions
 # using Subset_minimal_search.Serialization
 
+to_gpu = gpu
+# to_gpu = cpu
 
 """ Usual nn """
 model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
-model = deserialize(model_path)
+model = deserialize(model_path) |> to_gpu;
 
 """ nn for MILP search """
 # nn = Chain(Dense(28^2, 28, relu), Dense(28,28, relu), Dense(28,10)) 
 # nn = train_nn(nn, train_X_bin_neg, train_y, test_X_bin_neg, test_y)
-
+ 
 
 """ Prepare data """
 train_X, train_y = MNIST(split=:train)[:]
@@ -97,10 +99,12 @@ for img_i in 1:100
 end
 
 #new API
-t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ShapleyHeuristic(sm, sampler, 10000))
+ϵ = 0.8
+II = init_sbitset(length(xₛ))
+t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 100),  ShapleyHeuristic(sm, sampler, 100))
 
-ϵ = 0.5
-II = SBitSet{13, UInt64}(collect(1:700))
+ϵ = 0.9
+II = SBitSet{13, UInt64}(collect(1:784))
 t = @elapsed solution_subsets = backward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10),  ShapleyHeuristic(sm, sampler, 10), time_limit=60)
 
 II = init_sbitset(length(xₛ))
@@ -111,7 +115,16 @@ println(solution_subsets[1])
 
 
 
+II = SBitSet{13, UInt64}(collect(1:70))
+pop(II, 1)
+II
 
+push(II, 8)
+II
+
+new_subsets(II, 7)
+
+new_subsets(ii::SBitSet, idim) = [pop(ii, i) for i in 1:idim if i in ii]
 
 
 

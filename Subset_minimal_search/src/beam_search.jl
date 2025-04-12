@@ -34,9 +34,9 @@ solution_length(ii::Tuple) = solution_length.(ii)
 solution_length(ii::SBitSet) = length(ii)
 solution_length(::Nothing) = 0
 
-new_subsets(ii::SBitSet, idim) = [push(ii, i) for i in setdiff(1:idim, ii)]
+new_subsets_beam(ii::SBitSet, idim) = [push(ii, i) for i in setdiff(1:idim, ii)]
 
-function new_subsets((I3, I2, I1)::T, idims::Tuple, heuristic_fun) where {T<:Tuple}
+function new_subsets_beam((I3, I2, I1)::T, idims::Tuple, heuristic_fun) where {T<:Tuple}
     new_subsets = T[]
     if I3 !== nothing
         append!(new_subsets, [(push(I3, i), I2, I1) for i in setdiff(1:idims[1], I3)])
@@ -57,7 +57,7 @@ function expand_beam(sm::Subset_minimal, beam_sets, closed_list, heuristic_fun, 
         current_heuristic, current_error, ii = pop!(beam_sets)
         println("Current subset: ", ii, " heuristic: ", current_heuristic, " error: ", current_error)
 
-        for new_subset in new_subsets(ii, sm.dims)
+        for new_subset in new_subsets_beam(ii, sm.dims)
             if new_subset ∉ closed_list
                 new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
                 println("New subset: ", new_subset, " heuristic: ", new_heuristic, " error: ", new_error)
