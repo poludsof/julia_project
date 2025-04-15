@@ -43,8 +43,7 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
         if v
             if refine_with_backward
                 println("Valid subset found. Pruning with backward search...")
-                ii = backward_search(sm, ii, isvalid, heuristic_fun, time_limit=200, terminate_on_first_solution=false)
-                # ii = backward_search(sm, ii, backward_valid_func)
+                ii = @timeit to "backward_search"  backward_search(sm, ii, isvalid, heuristic_fun, time_limit=200, terminate_on_first_solution=false)
                 println("After pruning: ", ii)
             end
 

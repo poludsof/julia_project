@@ -51,10 +51,6 @@ function backward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristi
     return best_subsets
 end
 
-solution_length(ii::Tuple) = solution_length.(ii)
-solution_length(ii::SBitSet) = length(ii)
-solution_length(::Nothing) = 0
-
 new_subsets_bcwd(ii::SBitSet, idim) = [pop(ii, i) for i in 1:idim if i in ii]
 
 function new_subsets_bcwd((I3, I2, I1)::T, idims::Tuple) where {T<:Tuple}
