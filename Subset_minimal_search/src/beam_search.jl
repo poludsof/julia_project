@@ -30,10 +30,6 @@ function beam_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fu
     end
 end
 
-solution_length(ii::Tuple) = solution_length.(ii)
-solution_length(ii::SBitSet) = length(ii)
-solution_length(::Nothing) = 0
-
 new_subsets_beam(ii::SBitSet, idim) = [push(ii, i) for i in setdiff(1:idim, ii)]
 
 function new_subsets_beam((I3, I2, I1)::T, idims::Tuple, heuristic_fun) where {T<:Tuple}

@@ -1,5 +1,15 @@
 """
-Forward search with priority queue based on criterion value for minimal subset search for the FiRST layer of a neural network.
+    forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true, exclude_supersets = true, only_smaller = true, refine_with_backward=true) where {TT}
+
+    Forward search with priority queue based on criterion value for minimal subset search for the FiRST layer of a neural network.
+    ii --- initial solution
+    isvalid --- function of ii returning true if the solution is valid and false otherwise
+    heuristic_fun --- heuristic function estimating quality of the solution, lower is better
+    time_limit=Inf --- maximum time limit to find the solution(s)
+    terminate_on_first_solution=true --- if true the search stops after finding the first solution
+    exclude_supersets = true --- if true the search checks if the node currently expanded is not a superset of a known solution. If yes, it is not expanded.
+    only_smaller = true --- expand only solutions smaller then existing best, which is useful when looking for smallest possible 
+    refine_with_backward=true --- if true, the found solution is refined by backward search to check that it is a minimal subset solution
 """
 function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true, exclude_supersets = true, only_smaller = true, refine_with_backward=true) where {TT}
     initial_heuristic, full_error = heuristic_fun(ii)
@@ -22,7 +32,7 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
             return solutions
         end
 
-        sort!(stack, by = x -> -x[1])
+        sort!(stack, by = first, rev = true)
         current_heuristic, current_error, ii = pop!(stack)
         closed_list = push!(closed_list, ii)
 
@@ -43,7 +53,7 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
         if v
             if refine_with_backward
                 println("Valid subset found. Pruning with backward search...")
-                ii = @timeit to "backward_search"  backward_search(sm, ii, isvalid, heuristic_fun, time_limit=200, terminate_on_first_solution=false)
+                ii = @timeit to "backward_search"  backward_search(sm, ii, isvalid, heuristic_fun, time_limit=200, terminate_on_first_solution=true)
                 println("After pruning: ", ii)
             end
 
