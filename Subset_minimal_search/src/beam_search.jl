@@ -9,17 +9,19 @@ function beam_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fu
     beam_set = expand_beam(sm, beam_set, closed_list, heuristic_fun, beam_size)
     print_beam(beam_set, beam_size)
 
-    start_time = time()
+    println("Starting beam search...")
+
+    start_time = time() 
     iter_count = 1
-    @timeit to "beam search" while !isvalid(beam_set[1][3])
-        if time() - start_time > time_limit
+    @timeit to "beam search" while true
+        if (time() - start_time > time_limit && beam_set[1][2] > 0.02) || beam_set[1][2] < 0
             println("Timeout exceeded, returning last found solutions")
-            return beam_set
+            return iter_count, beam_set
         end
 
         v = @timeit to "isvalid" isvalid(beam_set[1][3])
         if v
-            terminate_on_first_solution && return(beam_set)
+            terminate_on_first_solution && return(iter_count, beam_set)
             push!(solutions, beam_set[1][3])
         end
 
@@ -29,10 +31,6 @@ function beam_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fu
         iter_count += 1
     end
 end
-
-solution_length(ii::Tuple) = solution_length.(ii)
-solution_length(ii::SBitSet) = length(ii)
-solution_length(::Nothing) = 0
 
 new_subsets_beam(ii::SBitSet, idim) = [push(ii, i) for i in setdiff(1:idim, ii)]
 
@@ -55,12 +53,12 @@ function expand_beam(sm::Subset_minimal, beam_sets, closed_list, heuristic_fun, 
     new_beam_set = []
     while !isempty(beam_sets)
         current_heuristic, current_error, ii = pop!(beam_sets)
-        println("Current subset: ", ii, " heuristic: ", current_heuristic, " error: ", current_error)
+        # println("Current subset: ", ii, " heuristic: ", current_heuristic, " error: ", current_error)
 
         for new_subset in new_subsets_beam(ii, sm.dims)
             if new_subset ∉ closed_list
                 new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
-                println("New subset: ", new_subset, " heuristic: ", new_heuristic, " error: ", new_error)
+                # println("New subset: ", new_subset, " heuristic: ", new_heuristic, " error: ", new_error)
                 push!(new_beam_set, (new_heuristic, new_error, new_subset))
                 if length(new_beam_set) > beam_size
                     sort!(new_beam_set, by=x->x[1]) # sort by heuristic
@@ -69,9 +67,8 @@ function expand_beam(sm::Subset_minimal, beam_sets, closed_list, heuristic_fun, 
             end
         end
     end
-    println("expand_beam - new beam set")
     new_beam_set
-end  
+end
 
 
 # Helper functions

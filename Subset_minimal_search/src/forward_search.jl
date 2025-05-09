@@ -19,7 +19,7 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
         steps += 1
         if time() - start_time > time_limit
             println("Timeout exceeded, returning last found solutions")
-            return solutions
+            return steps, solutions
         end
 
         sort!(stack, by = x -> -x[1])
@@ -43,13 +43,13 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
         if v
             if refine_with_backward
                 println("Valid subset found. Pruning with backward search...")
-                ii = backward_search(sm, ii, isvalid, heuristic_fun, time_limit=200, terminate_on_first_solution=false)
+                bcwd_steps, ii  = backward_search(sm, ii, isvalid, heuristic_fun, time_limit=30, terminate_on_first_solution=false)
                 # ii = backward_search(sm, ii, backward_valid_func)
                 println("After pruning: ", ii)
             end
 
             println("Valid subset found: $(solution_length(ii)) with error: ", current_error)
-            terminate_on_first_solution && return(ii)
+            terminate_on_first_solution && return(steps, ii)
             if solution_length(ii) < smallest_solution
                 smallest_solution = solution_length(ii)
                 println("new smallest solution so far: ", ii)
@@ -65,7 +65,7 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
     end
 
     println("Stack is empty")
-    return solutions
+    return steps, solutions
 end
 
 
