@@ -6,8 +6,8 @@
 ### Sampling distribution (Unoform or Bernoulli)
 sampler = UniformDistribution()
 ## or
-sampler_path = "Subset_minimal_search/models/milan_centers.jls"
-sampler = BernoulliMixture(to_gpu(deserialize(sampler_path)))
+# sampler_path = raw"Subset_minimal_search/models/milan_centers.jls"
+# sampler = BernoulliMixture(to_gpu(deserialize(sampler_path)))
 
 ### Set image to explain
 xₛ = train_X_bin_neg[:, 1] |> to_gpu
@@ -38,25 +38,25 @@ print_solution(solution_subsets)
 
 ## Backward search
 II = init_full_sbitset(xₛ) # initialize with all features for backward search
-time = @elapsed solution_subsets = backward_search(
-            sm, II, ii -> isvalid_sdp(ii, sm, accuracy, sampler, num_samples),
-            ShapleyHeuristic(sm, sampler, num_samples);
-            time_limit=30,
-            terminate_on_first_solution=false,
-        )
+# time = @elapsed solution_subsets = backward_search(
+#             sm, II, ii -> isvalid_sdp(ii, sm, accuracy, sampler, num_samples),
+#             ShapleyHeuristic(sm, sampler, num_samples);
+#             time_limit=30,
+#             terminate_on_first_solution=false,
+#         )
 ## Print first solution
 print_solution(solution_subsets)
 
  
 ## Beam search
 beam = 5 # number of subsets to keep in each step
-time = @elapsed solution_subsets = beam_search(
-            sm, II, ii -> isvalid_sdp(ii, sm, accuracy, sampler, num_samples),
-            ShapleyHeuristic(sm, sampler, num_samples),
-            time_limit=300, 
-            beam_size=beam, 
-            terminate_on_first_solution=true    
-        )
+# time = @elapsed solution_subsets = beam_search(
+#             sm, II, ii -> isvalid_sdp(ii, sm, accuracy, sampler, num_samples),
+#             ShapleyHeuristic(sm, sampler, num_samples),
+#             time_limit=300, 
+#             beam_size=beam, 
+#             terminate_on_first_solution=true    
+#         )
 ## Print first solution
 print_solution(solution_subsets)
 
