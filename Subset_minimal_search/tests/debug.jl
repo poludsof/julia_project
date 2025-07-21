@@ -20,11 +20,11 @@ const to = Subset_minimal_search.to
 # using Subset_minimal_search.Distributions
 # using Subset_minimal_search.Serialization
 
-CUDA.has_cuda()
-CUDA.device()
+# CUDA.has_cuda()
+# CUDA.device()
 
-to_gpu = gpu
-# to_gpu = cpu
+# to_gpu = gpu
+to_gpu = cpu
 
 """ Usual nn """
 model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
@@ -276,4 +276,4 @@ end
 
 # test_samplers()
 
-CUDA.reclaim()
+# CUDA.reclaim()
