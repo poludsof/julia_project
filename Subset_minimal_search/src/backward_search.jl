@@ -14,12 +14,16 @@ function backward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristi
         println("initial verification of the solution failed, returning the solution")
         return(0, ii)
     end
+    # if !isvalid(ii) 
+    #     println("initial verification of the solution failed, returning the solution")
+    #     return(0, ii)
+    # end
     println("sm:::::::", sm.output)
     println("II length: ", solution_length(ii))
-    initial_heuristic, full_error = heuristic_fun(ii)
-    println("Initial error: ", full_error, " Initial heuristic: ", initial_heuristic)
+    initial_hsum, initial_hmax = heuristic_fun(ii)
+    println(" Initial heuristic: ", initial_hsum, ", ", initial_hmax)
 
-    stack = [(initial_heuristic, full_error, ii)]
+    stack = [(initial_hsum, initial_hmax, ii)]
     closed_list = Set{TT}()
 
     solutions = Set{TT}()
@@ -28,31 +32,35 @@ function backward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristi
     new_subsets = TT[]
 
     println("Starting backward search...")
-    @timeit to "backward(length) search" while !isempty(stack)
+    @timeit to "backward search" while !isempty(stack)
         steps += 1
 
         if time() - start_time > time_limit
             println("Timeout exceeded, returning last found solution")
-            return steps, ii
+            return solutions
         end
 
         sort!(stack, by = ii -> length(ii[end]), rev = true) # we sort of want to expand minimum length first
-        current_heuristic, current_error, ii = pop!(stack)
+        current_hsum, current_hmax, ii = pop!(stack)
         closed_list = push!(closed_list, ii)
 
-        new_subsets = expand_bcwd(sm, typeof(stack)(), closed_list, ii, heuristic_fun)
+        new_subsets = expand_bcwd(sm, stack, closed_list, ii, heuristic_fun)
         new_subsets = filter(s -> isvalid(s[3]), new_subsets)
         if isempty(new_subsets)
-            terminate_on_first_solution && return(steps, ii)
             push!(solutions, ii)
+            terminate_on_first_solution && return solutions
         else
-            println("step: $steps, length $(solution_length(ii)) Expanding state with error: $current_error, heuristic: $current_heuristic")
+            println("step: $steps, length $(solution_length(ii)) with hsum: $current_hsum, hmax: $current_hmax")
             append!(stack, new_subsets)
         end
     end
     println("Stack is empty")
     last_solution = collect(solutions)[end]
-    return steps, last_solution
+    if isempty(solutions)
+        println("No solution found")
+        push!(solutions, ii)
+    end
+    return solutions # the best
 end
 
 new_subsets_bcwd(ii::SBitSet, idim) = [pop(ii, i) for i in 1:idim if i in ii]
@@ -74,9 +82,10 @@ end
 function expand_bcwd(sm::Subset_minimal, stack, closed_list, ii, heuristic_fun)
     for new_subset in new_subsets_bcwd(ii, sm.dims)
         if new_subset ∉ closed_list
-            new_heuristic, new_error = 0, 0
-            # new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
-            push!(stack, (new_heuristic, new_error, new_subset))    
+            new_hsum = 0
+            new_hmax = 0
+            # new_hsum, new_hmax = @timeit to "heuristic" heuristic_fun(new_subset)
+            push!(stack, (new_hsum, new_hmax, new_subset))
         end
     end
     stack

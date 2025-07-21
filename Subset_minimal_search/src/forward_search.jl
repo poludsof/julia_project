@@ -1,11 +1,21 @@
 """
 Forward search with priority queue based on criterion value for minimal subset search for the FiRST layer of a neural network.
 """
-function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true, exclude_supersets = true, only_smaller = true, refine_with_backward=true) where {TT}
-    initial_heuristic, full_error = heuristic_fun(ii)
-    println("Initial error: ", full_error, " Initial heuristic: ", initial_heuristic)
+function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true, exclude_supersets = true, only_smaller = true, refine_with_backward=true, samplers=nothing, num_samples=10000) where {TT}
+    println("ffffforward_search")
+    initial_heuristic = heuristic_fun(ii)
 
-    stack = [(initial_heuristic, full_error, ii)]
+    if typeof(initial_heuristic) == Tuple
+        println("TUPLE H")
+        initial_h, initial_hmax_err = initial_heuristic
+    elseif typeof(initial_heuristic) == Number 
+        initial_h = initial_heuristic
+    else
+        initial_h = sum(initial_heuristic)
+    end
+    println("Initial h: ", initial_h)
+
+    stack = [(initial_h, ii)]
     closed_list = Set{TT}()
     solutions = Set{TT}()
 
@@ -23,7 +33,7 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
         end
 
         sort!(stack, by = x -> -x[1])
-        current_heuristic, current_error, ii = pop!(stack)
+        current_h, ii = pop!(stack)
         closed_list = push!(closed_list, ii)
 
         # Look only for strictly smaller solutions
@@ -39,17 +49,18 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
         end
         
         v = @timeit to "isvalid" isvalid(ii)
+        # println("isvalid: ", v)
 
         if v
             if refine_with_backward
                 println("Valid subset found. Pruning with backward search...")
-                bcwd_steps, ii  = backward_search(sm, ii, isvalid, heuristic_fun, time_limit=30, terminate_on_first_solution=false)
-                # ii = backward_search(sm, ii, backward_valid_func)
-                println("After pruning: ", ii)
+                bcwd_solutions  = backward_search(sm, ii, isvalid, heuristic_fun, time_limit=30, terminate_on_first_solution=false)
+                println("After pruning: ", bcwd_solutions)
+                ii = collect(bcwd_solutions)[1] # take the first solution
             end
 
-            println("Valid subset found: $(solution_length(ii)) with error: ", current_error)
-            terminate_on_first_solution && return(steps, ii)
+            println("Valid subset found: $(solution_length(ii)) with heuristic: ", current_h)
+            terminate_on_first_solution && return ii
             if solution_length(ii) < smallest_solution
                 smallest_solution = solution_length(ii)
                 println("new smallest solution so far: ", ii)
@@ -57,10 +68,9 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
             push!(solutions, ii)
             continue
         end
+        println()
+        println("step: $steps, length $(solution_length(ii)) with heuristic: ", current_h)
 
-        println("step: $steps, length $(solution_length(ii)) Expanding state with error: $current_error, heuristic: $current_heuristic")
-
-        # steps > 2 && return(solutions)
         stack = @timeit to "expand_frwd" expand_frwd(sm, stack, closed_list, ii, heuristic_fun)
     end
 
@@ -90,10 +100,14 @@ function new_subsets_fwrd((I3, I2, I1)::T, idims::Tuple) where {T<:Tuple}
 end
 
 function expand_frwd(sm::Subset_minimal, stack, closed_list, ii, heuristic_fun)
+    println("Expanding subset")
     for new_subset in new_subsets_fwrd(ii, sm.dims)
         if new_subset ∉ closed_list
-            new_heuristic, new_error = @timeit to "heuristic"  heuristic_fun(new_subset)
-            push!(stack, (new_heuristic, new_error, new_subset))    
+            new_heuristic = @timeit to "heuristic" heuristic_fun(new_subset)
+            if new_heuristic isa NamedTuple
+                new_heuristic, new_error = new_heuristic
+            end
+            push!(stack, (new_heuristic, new_subset))    
         end
     end
     stack
