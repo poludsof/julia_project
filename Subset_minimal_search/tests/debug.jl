@@ -1,6 +1,6 @@
 # srun -p gpufast --gres=gpu:1  --mem=16000  --pty bash -i
 # cd julia/Pkg/Subset_minimal_search/tests/
-#  ~/.juliaup/bin/julia --project=.
+#  ~/.juliaup/bn/julia --project=.
 using Revise
 using ProfileCanvas, BenchmarkTools
 using CUDA
@@ -20,11 +20,15 @@ const to = Subset_minimal_search.to
 # using Subset_minimal_search.Distributions
 # using Subset_minimal_search.Serialization
 
+CUDA.has_cuda()
+CUDA.device()
+
 to_gpu = gpu
 # to_gpu = cpu
 
 """ Usual nn """
 model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
+model_path = "Subset_minimal_search/models/binary_model.jls"
 model = deserialize(model_path) |> to_gpu;
 
 """ nn for MILP search """
@@ -48,7 +52,7 @@ test_y = SMS.onehot_labels(test_y)
 
 """ Prepare image and label """
 xₛ = train_X_bin_neg[:, 1] |> to_gpu
-yₛ = argmax(train_y[:, 1]) - 1
+yₛ = argmax(train_y[:, 1])
 sm = SMS.Subset_minimal(model, xₛ, yₛ)
 
 function init_sbitset(n::Int, k = 0) 
@@ -61,9 +65,10 @@ function init_sbitset(n::Int, k = 0)
     x
 end
 
-# sampler = UniformDistribution()
-sampler = BernoulliMixture(to_gpu(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls"))))
-
+sampler = UniformDistribution()
+# sampler = BernoulliMixture(to_gpu(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls"))))
+# sampler_path = "Subset_minimal_search/models/milan_centers.jls"
+# sampler = BernoulliMixture(to_gpu(deserialize(sampler_path)))
 #test
 # ii = init_sbitset(784)
 # data_matrix = SMS.data_distribution(xₛ, ii, r, 100)
@@ -140,18 +145,52 @@ end
 function shapley_heuristic(ii::SBitSet, sm, sampler, num_samples, verbose = false)
     r = SMS.condition(sampler, sm.input, ii)
     x = SMS.sample_all(r, num_samples)
-    y = Flux.onecold(sm.nn(x)) .== sm.output
+    # y = Flux.onecold(sm.nn(x)) .== sm.output
+    y = argmax(sm.output)
+    scores = sm.nn(x)
+    if size(scores, 1) == 0 || size(scores, 2) == 0
+        error("Empty prediction scores — cannot compute onecold.")
+    end
+    ŷ = Flux.onecold(scores)
+    sum(==(y), ŷ) / length(ŷ)
+end
 
-    # For us, the DAF statistic is a difference in errors when the feature is correct and wrong
-    n = sum(x .== xₛ, dims = 2)
-    # n₊ = sum(x .== 1, dims = 2)
-    # n₋ = size(x,2) .- n₊
+function shapley_heuristic(ii::Tuple, sm, sampler, num_samples; verbose = false)
+    (I3, I2, I1) = ii
+    xₛ = sm.input
+    # println("shapley_heuristic")
+    h₃ = shapley_heuristic(I3, SMS.Subset_minimal(sm.nn, xₛ), sampler, num_samples)
+    h₂ = shapley_heuristic(I2, SMS.Subset_minimal(sm.nn[2:3], sm.nn[1](xₛ)), sampler, num_samples)
+    h₁ = shapley_heuristic(I1, SMS.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), sampler, num_samples)
 
-    # compute, how many +1 are correct
-    _f(xᵢ, xₛᵢ, yᵢ) = xᵢ == xₛᵢ ? yᵢ : false
-    c = sum(_f.(x, xₛ, y'), dims = 2)
+    h₃_h₂ = 0.0
+    h₂_h₁ = 0.0
 
-    cpu(c ./ max.(1, n))
+    if !isempty(I2)
+        h₃_h₂ = shapley_heuristic(I3, restrict_output(SMS.Subset_minimal(sm.nn[1], xₛ), I2), samplers[1], num_samples)
+    end 
+    if !isempty(I1)
+        h₂_h₁ = shapley_heuristic(I2, restrict_output(SMS.Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), samplers[2], num_samples)
+    end    
+    h₁_h₀ = shapley_heuristic(I1, SMS.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), samplers[3], num_samples)
+
+        # the input to the neural network has to imply h₃[I2] and h₂[I1] 
+        # h₃_h₂ = shapley_heuristic(I3, restrict_output(SMS.Subset_minimal(sm.nn[1], xₛ), I2), sampler, num_samples),
+        # h₃_h₁ = shapley_heuristic(I3, restrict_output(SMS.Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), sampler, num_samples),
+        # h₂_h₁ = shapley_heuristic(I2, (SMS.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), I1), sampler, num_samples),
+    #
+    hs = (
+        h₃ = h₃,
+        h₂ = h₂,
+        h₁ = h₁,
+        h₃_h₂ = h₃_h₂,
+        h₂_h₁ = h₂_h₁,
+        h₁_h₀ = h₁_h₀,
+    )
+    (;
+    hsum = mapreduce(x -> max(0, 0.99 - x), +, hs),
+    hmax = mapreduce(x -> max(0, 0.99 - x), max, hs),
+    )
 end
 
 struct ShapleyHeuristic{S,SM}
@@ -165,25 +204,27 @@ function ShapleyHeuristic(sm, sampler, num_samples, verbose = false)
     ShapleyHeuristic(sampler, sm, num_samples, verbose)
 end
 
-(sp::ShapleyHeuristic)(ii) = heuristic_sdp(ii, sm, 0.99, sampler, 10000)
+(sp::ShapleyHeuristic)(ii::SBitSet) = heuristic_sdp(ii, sm, 0.99, sampler, 10000)
+(sp::ShapleyHeuristic)(ii::Tuple) = shapley_heuristic(ii, sm, sampler, 10000)
 
-function Subset_minimal_search.expand_frwd(sm::Subset_minimal_search.Subset_minimal, stack, closed_list, ii::SBitSet, heuristic_fun::ShapleyHeuristic)
-    sp = heuristic_fun
-    acc = @timeit to "heuristic" shapley_heuristic(ii, sp.sm, sp.sampler, sp.num_samples, sp.verbose)
-    for i in setdiff(1:sm.dims, ii)
-        new_subset = push(ii, i)
-        if new_subset ∉ closed_list
-            new_error = 1 -acc[i]
-            push!(stack, (new_error, new_error, new_subset))
-        end
-    end
-    stack
-end
+# function Subset_minimal_search.expand_frwd(sm::Subset_minimal_search.Subset_minimal, stack, closed_list, ii::SBitSet, heuristic_fun::ShapleyHeuristic)
+#     sp = heuristic_fun
+#     acc = @timeit to "heuristic" shapley_heuristic(ii, sp.sm, sp.sampler, sp.num_samples, sp.verbose)
+#     for i in setdiff(1:sm.dims, ii)
+#         new_subset = push(ii, i)
+#         if new_subset ∉ closed_list
+#             new_error = 1 -acc[i]
+#             push!(stack, (new_error, new_error, new_subset))
+#         end
+#     end
+#     stack
+# end
 
- serialize("/home/pevnytom/tmp/subsets.jls", (;solutions = collect(solution_subsets), x = Vector(xₛ)))
+#  serialize("/home/pevnytom/tmp/subsets.jls", (;solutions = collect(solution_subsets), x = Vector(xₛ)))
 
-
-ϵ = 0.99
+samplers = (UniformDistribution(), UniformDistribution(), UniformDistribution())
+# samplers = (BernoulliMixture(centers[:,1:784,:]), BernoulliMixture(centers[:,785:1040,:]), BernoulliMixture(centers[:,1041:end,:]))
+ϵ = 0.9
 #2. Search
 """ Prepare image and label """
 img_i = 1
@@ -195,37 +236,44 @@ yₛ = argmax(model(xₛ))
 # sm = SMS.Subset_minimal(model, xₛ, yₛ, (784, 256, 256))
 
 # variant with just input
-II = init_sbitset(length(xₛ))
-sm = SMS.Subset_minimal(model, xₛ, yₛ)
+# II = init_sbitset(length(xₛ))
+# sm = SMS.Subset_minimal(model, xₛ, yₛ)
+sm = SMS.Subset_minimal(model, xₛ, yₛ, (784, 256, 256))
+II = (init_sbitset(784), init_sbitset(256), init_sbitset(256))
 
-# t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_ep(ii, sm, ϵ, sampler, 10000),  ShapleyHeuristic(sm, sampler, 10000))
+# t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 100),  ShapleyHeuristic(sm, sampler, 100), refine_with_backward = false)
 # t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ii -> heuristic_sdp(ii, sm, ϵ, sampler, 10000))
 # t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_ep(ii, sm, ϵ, sampler, 10000),  ii -> heuristic_ep(ii, sm, ϵ, sampler, 10000))
 
+# CUDA.@time forward_search(sm, II, ii -> isvalid_ep(ii, sm, ϵ, sampler, 10000),  ii -> heuristic_ep(ii, sm, ϵ, sampler, 10000), refine_with_backward = false)
 
-# t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 10000),  ShapleyHeuristic(sm, sampler, 10000); terminate_on_first_solution = false, exclude_supersets = true, only_smaller = false, time_limit = 300)
+# solutions = forward_search(sm, II, ii -> isvalid_sdp3(II, sm, ϵ, samplers, 1000),  ShapleyHeuristic(sm, samplers, 1000); terminate_on_first_solution=true, refine_with_backward = false)
 
 
 # verification checks
 function test_samplers()    
-    using Test
+    # using Test
     xₛ = train_X_bin_neg[:, 1]
 
     ii = init_sbitset(784, 64)
     vii = collect(ii)
     cii = setdiff(1:length(xₛ), ii)
 
-    sampler_gpu = BernoulliMixture(to_gpu(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls"))))
-    sampler_cpu = BernoulliMixture(deserialize(joinpath(@__DIR__, "..", "models", "milan_centers.jls")))
+    sampler_gpu = BernoulliMixture(to_gpu(deserialize(joinpath("Subset_minimal_search", "models", "milan_centers.jls"))))
+    sampler_cpu = BernoulliMixture(deserialize(joinpath("Subset_minimal_search", "models", "milan_centers.jls")))
 
     r_cpu = SMS.condition(sampler_cpu, cpu(xₛ), ii)
     r_gpu = SMS.condition(sampler_gpu, cu(xₛ), ii)
 
     for xx in [cpu(SMS.sample_all(r_cpu, 10_000)),cpu(SMS.sample_all(r_gpu, 10_000))]
-        @test all(xx .!= 0)
-        @test all(map(∈((-1,+1)), xx))
-        @test all(xx[vii,:] .== xₛ[vii])
+        all(xx .!= 0)
+        all(map(∈((-1,+1)), xx))
+        all(xx[vii,:] .== xₛ[vii])
     end
 
     mean(xx[cii,:], dims =2 )
 end
+
+# test_samplers()
+
+CUDA.reclaim()
