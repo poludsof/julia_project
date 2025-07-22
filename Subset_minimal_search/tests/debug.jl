@@ -2,7 +2,7 @@
 # cd julia/Pkg/Subset_minimal_search/tests/
 #  ~/.juliaup/bn/julia --project=.
 using Revise
-using ProfileCanvas, BenchmarkTools
+# using ProfileCanvas, BenchmarkTools
 using CUDA
 using Subset_minimal_search
 import Subset_minimal_search as SMS

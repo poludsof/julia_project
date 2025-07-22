@@ -16,6 +16,22 @@ function criterium_sdp(model, xₛ, y, ii, sampler, num_samples)
     sdp_score(model(xx), y)
 end
 
+
+struct CriteriumSdp{S,SM}
+    sm::SM
+    sampler::S
+    num_samples::Int
+    verbose::Bool
+end
+
+(sp::CriteriumSdp)(ii::SBitSet) = criterium_sdp(sm, ii, sampler, 100)
+
+function criterium_sdp(sm, ii, sampler, num_samples)
+    r = condition(sampler, sm.input, ii)
+    xx = sample_all(r, num_samples)
+    sdp_score(model(xx), sm.output)
+end
+
 function criterium_ep(model, xₛ, y, ii, sampler, num_samples)
     r = condition(sampler, xₛ, ii)
     xx = sample_all(r, num_samples)

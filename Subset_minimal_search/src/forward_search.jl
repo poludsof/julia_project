@@ -85,7 +85,14 @@ solution_length(::Nothing) = 0
 
 new_subsets_fwrd(ii::SBitSet, idim) = [push(ii, i) for i in setdiff(1:idim, ii)]
 
-function new_subsets_fwrd((I3, I2, I1)::T, idims::Tuple) where {T<:Tuple}
+function new_subsets_fwrd(ii::T, idims::Tuple) where {T<:Tuple}
+    if ii isa Tuple
+        I1, I2, I3 = ii
+    else
+        append!(new_subsets, [push(ii, i) for i in setdiff(1:idims[1], ii)])
+        return new_subsets
+    end
+
     new_subsets = T[]
     if I3 !== nothing
         append!(new_subsets, [(push(I3, i), I2, I1) for i in setdiff(1:idims[1], I3)])
@@ -110,5 +117,6 @@ function expand_frwd(sm::Subset_minimal, stack, closed_list, ii, heuristic_fun)
             push!(stack, (new_heuristic, new_subset))    
         end
     end
+    println(typeof(stack))
     stack
 end
