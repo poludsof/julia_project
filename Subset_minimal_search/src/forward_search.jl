@@ -29,7 +29,7 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
         steps += 1
         if time() - start_time > time_limit
             println("Timeout exceeded, returning last found solutions")
-            return steps, solutions
+            return solutions
         end
 
         sort!(stack, by = x -> -x[1])
@@ -68,14 +68,13 @@ function forward_search(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic
             push!(solutions, ii)
             continue
         end
-        println()
         println("step: $steps, length $(solution_length(ii)) with heuristic: ", current_h)
 
         stack = @timeit to "expand_frwd" expand_frwd(sm, stack, closed_list, ii, heuristic_fun)
     end
 
     println("Stack is empty")
-    return steps, solutions
+    return solutions
 end
 
 
@@ -107,7 +106,7 @@ function new_subsets_fwrd(ii::T, idims::Tuple) where {T<:Tuple}
 end
 
 function expand_frwd(sm::Subset_minimal, stack, closed_list, ii, heuristic_fun)
-    println("Expanding subset")
+    # println("Expanding subset")
     for new_subset in new_subsets_fwrd(ii, sm.dims)
         if new_subset ∉ closed_list
             new_heuristic = @timeit to "heuristic" heuristic_fun(new_subset)
@@ -117,6 +116,5 @@ function expand_frwd(sm::Subset_minimal, stack, closed_list, ii, heuristic_fun)
             push!(stack, (new_heuristic, new_subset))    
         end
     end
-    println(typeof(stack))
     stack
 end
