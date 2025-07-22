@@ -1,9 +1,9 @@
 using DataFrames, Serialization, StaticBitSets, Statistics, GLMakie
 using Flux
-import Subset_minimal_search as SMS
-using Subset_minimal_search
-using Subset_minimal_search: condition
-using Subset_minimal_search.TimerOutputs
+import ProbAbEx as PAE
+using ProbAbEx
+using ProbAbEx: condition
+using ProbAbEx.TimerOutputs
 using RelevancePropagation
 using ExplainableAI
 using ShapML
@@ -135,12 +135,12 @@ end
 let 
     x = deserialize("mnist_proper/model_noise_forward_beamsearch.jls")[1].x;
     sampler = UniformDistribution()
-    xx = Subset_minimal_search.sample_all(condition(sampler, x, empty_sbitset(x)), 100)
+    xx = PAE.sample_all(condition(sampler, x, empty_sbitset(x)), 100)
     # animate_images(xx, "sample_uniform.gif")        
     save("latex/images/sample_uniform.pdf", tile_images(xx, n = 2))        
     sampler = BernoulliMixture(deserialize(joinpath("mnist_proper", "milan_centers.jls")))
     Random.seed!(1)
-    xx = Subset_minimal_search.sample_all(condition(sampler, x, empty_sbitset(x)), 100)
+    xx = PAE.sample_all(condition(sampler, x, empty_sbitset(x)), 100)
     save("latex/images/sample_data.pdf", tile_images(xx, n = 2))          
 end
 
@@ -245,8 +245,8 @@ end
 sampler = BernoulliMixture(centers);
 model = deserialize("mnist/binary_model.jls")
 rule, skeleton, xₛ, _ = deserialize("mnist_proper/skeleton_90.jls")
-r = SMS.condition(sampler, xₛ, rule[1])
-xx = SMS.sample_all(r, 10_000);
+r = PAE.condition(sampler, xₛ, rule[1])
+xx = PAE.sample_all(r, 10_000);
 
 l₀ = vec(mean(xx .> 0, dims = 2))
 l₁ = vec(mean(model[1:1](xx) .> 0, dims = 2))

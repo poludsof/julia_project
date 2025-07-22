@@ -4,14 +4,14 @@
 using Revise
 using ProfileCanvas, BenchmarkTools
 using CUDA
-using Subset_minimal_search
-import Subset_minimal_search as SMS
-using Subset_minimal_search.Flux
+using ProbAbEx
+import ProbAbEx as PAE
+using ProbAbEx.Flux
 using Serialization
 
 to_gpu = gpu
 
-model_path = "Subset_minimal_search/models/binary_model.jls"
+model_path = "models/binary_model.jls"
 model = deserialize(model_path) |> to_gpu;
 
 sampler = UniformDistribution()
@@ -33,8 +33,8 @@ test_X_binary = preprocess_binary(test_X)
 train_X_bin_neg = preprocess_bin_neg(train_X_binary)
 test_X_bin_neg = preprocess_bin_neg(test_X_binary)
 
-train_y = SMS.onehot_labels(train_y)
-test_y = SMS.onehot_labels(test_y)
+train_y = PAE.onehot_labels(train_y)
+test_y = PAE.onehot_labels(test_y)
 
 
 function init_sbitset(n::Int, k = 0) 
@@ -48,13 +48,13 @@ function init_sbitset(n::Int, k = 0)
 end
 
 function isvalid_sdp(ii::Tuple, sm, ϵ, sampler, num_samples, verbose = false)
-    acc = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii[1], sampler, num_samples)
+    acc = PAE.criterium_sdp(sm.nn, sm.input, sm.output, ii[1], sampler, num_samples)
     verbose && println("accuracy  = ",acc , " threshold = ", ϵ)
     acc > ϵ
 end
 
 function heuristic_sdp(ii::Tuple, sm, ϵ, sampler, num_samples, verbose = false)
-    h = SMS.heuristic(sm, SMS.criterium_sdp, SMS.sdp_partial, ii, ϵ, sampler, num_samples)
+    h = PAE.heuristic(sm, PAE.criterium_sdp, PAE.sdp_partial, ii, ϵ, sampler, num_samples)
     verbose && println("heuristic = ",h)
     h
 end
@@ -63,34 +63,34 @@ end
 # For tuple, we need to define appropriate heuristics which understand tuples
 
 function isvalid_sdp(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
-    acc = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
+    acc = PAE.criterium_sdp(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
     verbose && println("accuracy  = ",acc , " threshold = ", ϵ)
     acc > ϵ
 end
 
 function heuristic_sdp(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
-    h = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
+    h = PAE.criterium_sdp(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
     h = ϵ - h
     verbose && println("heuristic = ",h)
     (;hsum = h, hmax = h)
 end
 
 function isvalid_ep(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
-    acc = SMS.criterium_ep(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
+    acc = PAE.criterium_ep(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
     verbose && println("accuracy  = ",acc , " threshold = ", ϵ)
     acc > ϵ
 end
 
 function heuristic_ep(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
-    h = SMS.criterium_ep(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
+    h = PAE.criterium_ep(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
     h = ϵ - h
     verbose && println("heuristic = ",h)
     (;hsum = h, hmax = h)
 end
 
 function shapley_heuristic(ii::SBitSet, sm, sampler, num_samples, verbose = false)
-    r = SMS.condition(sampler, sm.input, ii)
-    x = SMS.sample_all(r, num_samples)
+    r = PAE.condition(sampler, sm.input, ii)
+    x = PAE.sample_all(r, num_samples)
     y = Flux.onecold(sm.nn(x)) .== sm.output
 
     # For us, the DAF statistic is a difference in errors when the feature is correct and wrong

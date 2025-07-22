@@ -1,4 +1,4 @@
-using Subset_minimal_search: Subset_minimal, expand_frwd, solution_length
+using ProbAbEx: Subset_minimal, expand_frwd, solution_length
 
 function forward_beamsearch(sm::Subset_minimal, ii::TT, isvalid::Function, heuristic_fun; time_limit=Inf, beam_size = 100, branch_size = 10, terminate_on_first_solution=true, exclude_supersets = true, refine_with_backward=true) where {TT}
     initial_heuristic = heuristic_fun(ii)

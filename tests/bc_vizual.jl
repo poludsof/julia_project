@@ -2,7 +2,7 @@
 using CSV
 using MLDatasets
 using DataFrames, Serialization, StaticBitSets, Statistics, CairoMakie, Makie
-using Subset_minimal_search
+using ProbAbEx
 
 # data = CSV.File("/home/sofia/julia_project/Subset_minimal_search/tests/beam_search_uniform_all") |> DataFrame
 # data = CSV.File("/home/sofia/julia_project/Subset_minimal_search/tests/bcwd_search_uniform_all") |> DataFrame

@@ -1,4 +1,5 @@
-module Subset_minimal_search
+module ProbAbEx
+
 using CUDA
 using Flux
 using JuMP
@@ -17,7 +18,6 @@ using Makie.Colors
 using Serialization
 using DataStructures
 using Distributions
-const SMS = Subset_minimal_search
 const to = TimerOutput()
 
 struct Subset_minimal{NN, I, O, ID}
@@ -33,7 +33,6 @@ Subset_minimal(nn, input) = Subset_minimal(nn, input, nn(input))
 include("mnist_training.jl")
 include("plots.jl")
 include("milp.jl")
-
 include("criterium.jl")
 include("forward_search.jl")
 include("backward_search.jl")

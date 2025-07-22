@@ -4,21 +4,17 @@
 using Revise
 # using ProfileCanvas, BenchmarkTools
 using CUDA
-using Subset_minimal_search
-import Subset_minimal_search as SMS
-using Subset_minimal_search.Flux
-using Subset_minimal_search.LinearAlgebra
-using Subset_minimal_search.MLDatasets
-using Subset_minimal_search.StaticBitSets
-using Subset_minimal_search.TimerOutputs
+using ProbAbEx
+import ProbAbEx as PAE
+using ProbAbEx.Flux
+using ProbAbEx.LinearAlgebra
+using ProbAbEx.MLDatasets
+using ProbAbEx.StaticBitSets
+using ProbAbEx.TimerOutputs
 using Serialization
-using Subset_minimal_search.Makie
-const to = Subset_minimal_search.to
-# using Subset_minimal_search.Makie.Colors
-# using Subset_minimal_search.Serialization
-# using Subset_minimal_search.DataStructures
-# using Subset_minimal_search.Distributions
-# using Subset_minimal_search.Serialization
+using ProbAbEx.Makie
+const to = ProbAbEx.to
+
 
 # CUDA.has_cuda()
 # CUDA.device()
@@ -28,7 +24,7 @@ to_gpu = cpu
 
 """ Usual nn """
 model_path = joinpath(@__DIR__, "..", "models", "binary_model.jls")
-model_path = "Subset_minimal_search/models/binary_model.jls"
+model_path = "models/binary_model.jls"
 model = deserialize(model_path) |> to_gpu;
 
 """ nn for MILP search """
@@ -47,13 +43,13 @@ test_X_binary = preprocess_binary(test_X)
 train_X_bin_neg = preprocess_bin_neg(train_X_binary)
 test_X_bin_neg = preprocess_bin_neg(test_X_binary)
 
-train_y = SMS.onehot_labels(train_y)
-test_y = SMS.onehot_labels(test_y)
+train_y = PAE.onehot_labels(train_y)
+test_y = PAE.onehot_labels(test_y)
 
 """ Prepare image and label """
 xₛ = train_X_bin_neg[:, 1] |> to_gpu
 yₛ = argmax(train_y[:, 1])
-sm = SMS.Subset_minimal(model, xₛ, yₛ)
+sm = PAE.Subset_minimal(model, xₛ, yₛ)
 
 function init_sbitset(n::Int, k = 0) 
     N = ceil(Int, n / 64)
@@ -71,7 +67,7 @@ sampler = UniformDistribution()
 # sampler = BernoulliMixture(to_gpu(deserialize(sampler_path)))
 #test
 # ii = init_sbitset(784)
-# data_matrix = SMS.data_distribution(xₛ, ii, r, 100)
+# data_matrix = PAE.data_distribution(xₛ, ii, r, 100)
 
 #first image
 # println(data_matrix[:, 1])
@@ -102,13 +98,13 @@ reset_timer!(to)
 # II = (init_sbitset(784), nothing, nothing)
 # For tuple, we need to define appropriate heuristics which understand tuples
 function isvalid_sdp(ii::Tuple, sm, ϵ, sampler, num_samples, verbose = false)
-    acc = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii[1], sampler, num_samples)
+    acc = PAE.criterium_sdp(sm.nn, sm.input, sm.output, ii[1], sampler, num_samples)
     verbose && println("accuracy  = ",acc , " threshold = ", ϵ)
     acc > ϵ
 end
 
 function heuristic_sdp(ii::Tuple, sm, ϵ, sampler, num_samples, verbose = false)
-    h = SMS.heuristic(sm, SMS.criterium_sdp, SMS.sdp_partial, ii, ϵ, sampler, num_samples)
+    h = PAE.heuristic(sm, PAE.criterium_sdp, PAE.sdp_partial, ii, ϵ, sampler, num_samples)
     verbose && println("heuristic = ",h)
     h
 end
@@ -117,34 +113,34 @@ end
 # For tuple, we need to define appropriate heuristics which understand tuples
 
 function isvalid_sdp(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
-    acc = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
+    acc = PAE.criterium_sdp(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
     verbose && println("accuracy  = ",acc , " threshold = ", ϵ)
     acc > ϵ
 end
 
 function heuristic_sdp(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
-    h = SMS.criterium_sdp(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
+    h = PAE.criterium_sdp(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
     h = ϵ - h
     verbose && println("heuristic = ",h)
     (;hsum = h, hmax = h)
 end
 
 function isvalid_ep(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
-    acc = SMS.criterium_ep(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
+    acc = PAE.criterium_ep(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
     verbose && println("accuracy  = ",acc , " threshold = ", ϵ)
     acc > ϵ
 end
 
 function heuristic_ep(ii::SBitSet, sm, ϵ, sampler, num_samples, verbose = false)
-    h = SMS.criterium_ep(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
+    h = PAE.criterium_ep(sm.nn, sm.input, sm.output, ii, sampler, num_samples)
     h = ϵ - h
     verbose && println("heuristic = ",h)
     (;hsum = h, hmax = h)
 end
 
 function shapley_heuristic(ii::SBitSet, sm, sampler, num_samples, verbose = false)
-    r = SMS.condition(sampler, sm.input, ii)
-    x = SMS.sample_all(r, num_samples)
+    r = PAE.condition(sampler, sm.input, ii)
+    x = PAE.sample_all(r, num_samples)
     # y = Flux.onecold(sm.nn(x)) .== sm.output
     y = argmax(sm.output)
     scores = sm.nn(x)
@@ -159,25 +155,25 @@ function shapley_heuristic(ii::Tuple, sm, sampler, num_samples; verbose = false)
     (I3, I2, I1) = ii
     xₛ = sm.input
     # println("shapley_heuristic")
-    h₃ = shapley_heuristic(I3, SMS.Subset_minimal(sm.nn, xₛ), sampler, num_samples)
-    h₂ = shapley_heuristic(I2, SMS.Subset_minimal(sm.nn[2:3], sm.nn[1](xₛ)), sampler, num_samples)
-    h₁ = shapley_heuristic(I1, SMS.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), sampler, num_samples)
+    h₃ = shapley_heuristic(I3, PAE.Subset_minimal(sm.nn, xₛ), sampler, num_samples)
+    h₂ = shapley_heuristic(I2, PAE.Subset_minimal(sm.nn[2:3], sm.nn[1](xₛ)), sampler, num_samples)
+    h₁ = shapley_heuristic(I1, PAE.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), sampler, num_samples)
 
     h₃_h₂ = 0.0
     h₂_h₁ = 0.0
 
     if !isempty(I2)
-        h₃_h₂ = shapley_heuristic(I3, restrict_output(SMS.Subset_minimal(sm.nn[1], xₛ), I2), samplers[1], num_samples)
+        h₃_h₂ = shapley_heuristic(I3, restrict_output(PAE.Subset_minimal(sm.nn[1], xₛ), I2), samplers[1], num_samples)
     end 
     if !isempty(I1)
-        h₂_h₁ = shapley_heuristic(I2, restrict_output(SMS.Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), samplers[2], num_samples)
+        h₂_h₁ = shapley_heuristic(I2, restrict_output(PAE.Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), samplers[2], num_samples)
     end    
-    h₁_h₀ = shapley_heuristic(I1, SMS.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), samplers[3], num_samples)
+    h₁_h₀ = shapley_heuristic(I1, PAE.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), samplers[3], num_samples)
 
         # the input to the neural network has to imply h₃[I2] and h₂[I1] 
-        # h₃_h₂ = shapley_heuristic(I3, restrict_output(SMS.Subset_minimal(sm.nn[1], xₛ), I2), sampler, num_samples),
-        # h₃_h₁ = shapley_heuristic(I3, restrict_output(SMS.Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), sampler, num_samples),
-        # h₂_h₁ = shapley_heuristic(I2, (SMS.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), I1), sampler, num_samples),
+        # h₃_h₂ = shapley_heuristic(I3, restrict_output(PAE.Subset_minimal(sm.nn[1], xₛ), I2), sampler, num_samples),
+        # h₃_h₁ = shapley_heuristic(I3, restrict_output(PAE.Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), sampler, num_samples),
+        # h₂_h₁ = shapley_heuristic(I2, (PAE.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), I1), sampler, num_samples),
     #
     hs = (
         h₃ = h₃,
@@ -233,12 +229,12 @@ yₛ = argmax(model(xₛ))
 
 # variant with triplets
 # II = (init_sbitset(784), nothing, nothing)
-# sm = SMS.Subset_minimal(model, xₛ, yₛ, (784, 256, 256))
+# sm = PAE.Subset_minimal(model, xₛ, yₛ, (784, 256, 256))
 
 # variant with just input
 # II = init_sbitset(length(xₛ))
-# sm = SMS.Subset_minimal(model, xₛ, yₛ)
-sm = SMS.Subset_minimal(model, xₛ, yₛ, (784, 256, 256))
+# sm = PAE.Subset_minimal(model, xₛ, yₛ)
+sm = PAE.Subset_minimal(model, xₛ, yₛ, (784, 256, 256))
 II = (init_sbitset(784), init_sbitset(256), init_sbitset(256))
 
 # t = @elapsed solution_subsets = forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 100),  ShapleyHeuristic(sm, sampler, 100), refine_with_backward = false)
@@ -262,10 +258,10 @@ function test_samplers()
     sampler_gpu = BernoulliMixture(to_gpu(deserialize(joinpath("Subset_minimal_search", "models", "milan_centers.jls"))))
     sampler_cpu = BernoulliMixture(deserialize(joinpath("Subset_minimal_search", "models", "milan_centers.jls")))
 
-    r_cpu = SMS.condition(sampler_cpu, cpu(xₛ), ii)
-    r_gpu = SMS.condition(sampler_gpu, cu(xₛ), ii)
+    r_cpu = PAE.condition(sampler_cpu, cpu(xₛ), ii)
+    r_gpu = PAE.condition(sampler_gpu, cu(xₛ), ii)
 
-    for xx in [cpu(SMS.sample_all(r_cpu, 10_000)),cpu(SMS.sample_all(r_gpu, 10_000))]
+    for xx in [cpu(PAE.sample_all(r_cpu, 10_000)),cpu(PAE.sample_all(r_gpu, 10_000))]
         all(xx .!= 0)
         all(map(∈((-1,+1)), xx))
         all(xx[vii,:] .== xₛ[vii])

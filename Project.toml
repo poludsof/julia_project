@@ -1,4 +1,4 @@
-name = "Subset_minimal_search"
+name = "ProbAbEx"
 uuid = "617967a3-e185-4e1a-ad46-feef785cd8a4"
 authors = ["Sofia Poludina <poludsof@fel.cvut.cz>"]
 version = "0.1.0"

@@ -160,7 +160,7 @@ Base.show(io::IO, s::BatchHeuristic) = println(io, "BatchHeuristic")
 
 (sp::BatchHeuristic)(ii) = sp.finalize(sp.scalar(ii))
 
-function Subset_minimal_search.expand_frwd(sm::Subset_minimal_search.Subset_minimal, stack, closed_list, ii::SBitSet, hfun::BatchHeuristic)
+function ProbAbEx.expand_frwd(sm::ProbAbEx.Subset_minimal, stack, closed_list, ii::SBitSet, hfun::BatchHeuristic)
     acc = @timeit to "heuristic" hfun.batch(ii)
     for i in setdiff(1:sm.dims, ii)
         new_subset = push(ii, i)
@@ -172,7 +172,7 @@ function Subset_minimal_search.expand_frwd(sm::Subset_minimal_search.Subset_mini
 end
 
 
-function Subset_minimal_search.expand_frwd(sm::Subset_minimal_search.Subset_minimal, stack, closed_list, ii::Tuple, heuristic_fun::BatchHeuristic)
+function ProbAbEx.expand_frwd(sm::ProbAbEx.Subset_minimal, stack, closed_list, ii::Tuple, heuristic_fun::BatchHeuristic)
     sp = heuristic_fun
     (I3, I2, I1) = ii
 
@@ -384,7 +384,7 @@ function shapley_heuristic2(ii::Tuple, sm::Subset_minimal, sampler, num_samples;
     (;h₃_h₂, h₂_h₁, h₁_h₀)
 end
 
-function Subset_minimal_search.expand_bcwd(sm::Subset_minimal_search.Subset_minimal, stack, closed_list, ii::Tuple, heuristic_fun::BatchHeuristic)
+function ProbAbEx.expand_bcwd(sm::ProbAbEx.Subset_minimal, stack, closed_list, ii::Tuple, heuristic_fun::BatchHeuristic)
     sp = heuristic_fun
     (I3, I2, I1) = ii
     for i in I3

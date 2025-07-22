@@ -1,11 +1,11 @@
 using DataFrames, Serialization, StaticBitSets, Statistics, CairoMakie
 using Flux
-import Subset_minimal_search as SMS
+import ProbAbEx as PAE
 # using MakieExtra
 using CairoMakie
-using Subset_minimal_search
-using Subset_minimal_search: condition
-using Subset_minimal_search.TimerOutputs
+using ProbAbEx
+using ProbAbEx: condition
+using ProbAbEx.TimerOutputs
 include("visualization_tools.jl")
 
 """
@@ -141,11 +141,11 @@ end
 
 
 #!
-centers = deserialize("/home/sofia/julia_project/Subset_minimal_search/ml_in_prague/mnist/binary_model_hidden_centers.jls")
+centers = deserialize("/home/sofia/julia_project/ml_in_prague/mnist/binary_model_hidden_centers.jls")
 # # centers = deserialize(joinpath("mnist", "binary_model_hidden_centers.jls"))
 samplers = (BernoulliMixture(centers[:,1:784,:]), BernoulliMixture(centers[:,785:1040,:]), BernoulliMixture(centers[:,1041:end,:]))
 # # rule, skeleton, xₛ, _ = deserialize("mnist/skeleton_90.jls")
-rule, skeleton, xₛ, _ = deserialize("/home/sofia/julia_project/Subset_minimal_search/ml_in_prague/mnist/skeleton_100_new.jls")
+rule, skeleton, xₛ, _ = deserialize("/home/sofia/julia_project/ml_in_prague/mnist/skeleton_100_new.jls")
 # println("rule: ", rule)
 # println("skeleton: ", skeleton)
 # print_skeleton(rule, skeleton)
@@ -165,9 +165,9 @@ empty_sbitset(n::Int) = SBitSet{ceil(Int, n / 64), UInt64}()
 empty_sbitset(x::AbstractArray) = empty_sbitset(length(x))
 using CSV
 # data = CSV.File("/home/sofia/julia_project/forward_search_bernl_all") |> DataFrame
-# data = CSV.File("/home/sofia/julia_project/Subset_minimal_search/tests/beam_search_uniform_all") |> DataFrame
-# data = CSV.File("/home/sofia/julia_project/Subset_minimal_search/tests/bcwd_search_uniform_all") |> DataFrame
-# data = CSV.File("/home/sofia/julia_project/Subset_minimal_search/tests/forward_search_uniform_all") |> DataFrame
+# data = CSV.File("/home/sofia/julia_project/tests/beam_search_uniform_all") |> DataFrame
+# data = CSV.File("/home/sofia/julia_project/tests/bcwd_search_uniform_all") |> DataFrame
+# data = CSV.File("/home/sofia/julia_project/tests/forward_search_uniform_all") |> DataFrame
 # data = CSV.File("/home/sofia/julia_project/tuned_forward_search_uniform_all") |> DataFrame
 # data = CSV.File("/home/sofia/julia_project/ep_tuned_forward_search_uniform_all") |> DataFrame
 

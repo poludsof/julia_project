@@ -119,7 +119,7 @@ img_i = 1
 xₛ = train_X_bin_neg[:, img_i]
 yₛ = argmax(model(xₛ))
 II = init_sbitset(length(xₛ))
-sm = SMS.Subset_minimal(model, xₛ, yₛ)
+sm = PAE.Subset_minimal(model, xₛ, yₛ)
 greedy_lucb(sm, II, CriteriumSdp(sm, sampler, 1000, false), 0.9, 0.1, num_samples=1000)
 
 
@@ -178,7 +178,7 @@ function lucb_forward_search(sm, ii::SBitSet, isvalid::Function, heuristic_fun; 
 end
 
 
-lucb_forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 100), CriteriumSdp(sm, sampler, 1000, false); time_limit=Inf, terminate_on_first_solution=true)        
+# lucb_forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 100), CriteriumSdp(sm, sampler, 1000, false); time_limit=Inf, terminate_on_first_solution=true)        
 
 
 function bernoulli_bounds_test()

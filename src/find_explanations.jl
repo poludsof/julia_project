@@ -1,21 +1,21 @@
 # srun -p gpufast --gres=gpu:1  --mem=16000  --pty bash -i
 
-# cd julia/Pkg/Subset_minimal_search/tests/
+# cd julia/Pkg/ProbAbEx/tests/
 #  ~/.juliaup/bin/julia --project=.
 using CUDA
-using Subset_minimal_search
-import Subset_minimal_search as SMS
-using Subset_minimal_search.Flux
-using Subset_minimal_search.LinearAlgebra
-using Subset_minimal_search.MLDatasets
-using Subset_minimal_search.StaticBitSets
-using Subset_minimal_search.TimerOutputs
+using ProbAbEx
+import ProbAbEx as PAE
+using ProbAbEx.Flux
+using ProbAbEx.LinearAlgebra
+using ProbAbEx.MLDatasets
+using ProbAbEx.StaticBitSets
+using ProbAbEx.TimerOutputs
 using Serialization
 using Distributions
-using Subset_minimal_search.Makie
-using Subset_minimal_search: Subset_minimal
-const to = Subset_minimal_search.to
-const SMS = Subset_minimal_search
+using ProbAbEx.Makie
+using ProbAbEx: Subset_minimal
+const to = ProbAbEx.to
+const PAE = ProbAbEx
 
 # include("models.jl")
 # include("rule_utilities.jl")
@@ -92,7 +92,7 @@ img_ids = [findfirst(i -> cpu_train_y[i] == j && cc[i], eachindex(cc)) for j in 
 for img_id in img_ids
     xₛ = train_x[:, img_id] |> to_gpu
     yₛ = model(xₛ)
-    sm = SMS.Subset_minimal(model, xₛ, yₛ, (784, 256, 256))
+    sm = PAE.Subset_minimal(model, xₛ, yₛ, (784, 256, 256))
     ii = (empty_sbitset(784), empty_sbitset(256), empty_sbitset(256))
 
     println("yₛ = ")
@@ -110,7 +110,7 @@ for img_id in img_ids
         map(rule[i+1]) do j
             println("i = ", i, " j = ", j)
             xᵢ = i > 1 ? model[i-1](xₛ) : xₛ
-            # sm = SMS.Subset_minimal(restrict_output(model[i], [j]), xᵢ)
+            # sm = PAE.Subset_minimal(restrict_output(model[i], [j]), xᵢ)
             println("sm is done")
             # brule = backward_search(sm, rule[i], ii -> isvalid_sdp(ii, sm, ϵ, samplers[i], 10000),  depth_first; time_limit = 600, terminate_on_first_solution = true)
             println("I: $i", " J: $j")
@@ -139,7 +139,7 @@ img_ids = [findfirst(i -> cpu_train_y[i] == j && cc[i], eachindex(cc)) for j in 
 for img_id in img_ids
     xₛ = train_x[:, img_id] |> to_gpu
     yₛ = model(xₛ)
-    sm = SMS.Subset_minimal(model, xₛ, yₛ, (784, 256, 256))
+    sm = PAE.Subset_minimal(model, xₛ, yₛ, (784, 256, 256))
     ii = (empty_sbitset(784), empty_sbitset(256), empty_sbitset(256))
 
     heuristic = BatchHeuristic(
@@ -158,7 +158,7 @@ for img_id in img_ids
     skeleton = map(1:length(rule)-1) do i 
         map(rule[i+1]) do j
             xᵢ = i > 1 ? model[i-1](xₛ) : xₛ
-            sm = SMS.Subset_minimal(restrict_output(model[i], [j]), xᵢ)
+            sm = PAE.Subset_minimal(restrict_output(model[i], [j]), xᵢ)
             brule = backward_search(sm, rule[i], ii -> isvalid_sdp(ii, sm, ϵ, samplers[i], 10000),  depth_first; time_limit = 600, terminate_on_first_solution = true)
             (;i, j, rule = brule)
             # brules = backward_search(sm, rule[i], ii -> isvalid_sdp(ii, sm, ϵ, input_sampler, 10000),  depth_first; time_limit = 600, terminate_on_first_solution = false)
@@ -179,7 +179,7 @@ println("finished 2")
 # img_id = 2
 # xₛ = train_x[:, img_id] |> to_gpu
 # yₛ = Flux.onecold(model(xₛ))
-# sm = SMS.Subset_minimal(model, xₛ, yₛ)
+# sm = PAE.Subset_minimal(model, xₛ, yₛ)
 
 # heuristic = BatchHeuristic(
 #     ii -> accuracy_sdp(ii, sm, sampler, 10000),
@@ -220,7 +220,7 @@ println("finished 2")
 #         @show img_id
 #         xₛ = train_x[:, img_id] |> to_gpu
 #         yₛ = Flux.onecold(vec(model(xₛ)))
-#         sm = SMS.Subset_minimal(model, xₛ, yₛ)
+#         sm = PAE.Subset_minimal(model, xₛ, yₛ)
 
 #         heuristic = BatchHeuristic(
 #             ii -> accuracy_sdp(ii, sm, sampler, 10000),
@@ -278,7 +278,7 @@ println("finished 2")
 #         yₛ = Flux.onecold(vec(model(xₛ)))
 #         xₐ = to_gpu(attack(cpu_model, cpu(xₛ)))
 #         yₐ = Flux.onecold(model(xₐ))
-#         sm = SMS.Subset_minimal(model, xₐ, yₐ)
+#         sm = PAE.Subset_minimal(model, xₐ, yₐ)
 #         heuristic = BatchHeuristic(
 #             ii -> accuracy_sdp(ii, sm, sampler, 100000),
 #             ii -> batch_heuristic(ii, sm, sampler, 10000; verbose = true),
