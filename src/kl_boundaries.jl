@@ -53,14 +53,22 @@ function compute_beta(n_features::Int, t::Real, delta::Real)
     return temp + log(temp)
 end
 
-function greedy_lucb(sm, ii::SBitSet, sample_fn, delta, epsilon; num_samples=1000)
-    anchors = expand_frwd(sm, [], [], ii, sample_fn)
-    # println("size of anchors: ", typeof(anchors), " first:" , anchors[1])
-    means, sets = map(x -> x[1], anchors), map(x -> x[2], anchors)
-    # println("Means: ", means[1])
-    # println("Sets: ", sets[1])
+function fill_missing_samples(sample_fn, n_samples, positives, means, anchor_sets::Vector)
+        for i in eachindex(n_samples)
+        if n_samples[i] == 0
+            means[i] = sample_fn(anchor_sets[i])
+            n_samples[i] += 100
+            positives[i] = means[i] * n_samples[i]
+        end
+    end
+end
 
-    n_samples = fill(num_samples, length(anchors))  ###! modify
+function greedy_lucb(sm, ii::SBitSet, sampler, sample_fn, delta, epsilon; num_samples=1000)
+    positives, n_samples = batch_heuristic(ii, sm, sampler, num_samples)
+    anchor_sets = PAE.new_subsets_fwrd(ii, sm.dims)
+    means = positives ./ n_samples
+    fill_missing_samples(sample_fn, n_samples, positives, means, anchor_sets)
+
     ub = zeros(length(anchors))
     lb = zeros(length(anchors))
     top_n = 2 # number of top features to consider
@@ -114,13 +122,6 @@ function greedy_lucb(sm, ii::SBitSet, sample_fn, delta, epsilon; num_samples=100
     # println("returning: ", sets[ut], " with mean: ", means[ut], " and ud:", ub[ut])
     return means[ut], sets[ut]
 end
-
-img_i = 1
-xₛ = train_X_bin_neg[:, img_i]
-yₛ = argmax(model(xₛ))
-II = init_sbitset(length(xₛ))
-sm = PAE.Subset_minimal(model, xₛ, yₛ)
-greedy_lucb(sm, II, CriteriumSdp(sm, sampler, 1000, false), 0.9, 0.1, num_samples=1000)
 
 
 function lucb_forward_search(sm, ii::SBitSet, isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true, num_samples=1000)
@@ -178,8 +179,16 @@ function lucb_forward_search(sm, ii::SBitSet, isvalid::Function, heuristic_fun; 
 end
 
 
+sampler = UniformDistribution()
+img_i = 1
+xₛ = train_X_bin_neg[:, img_i]
+yₛ = argmax(model(xₛ))
+II = init_sbitset(length(xₛ))
+sm = Subset_minimal(model, xₛ, yₛ)
+greedy_lucb(sm, II, sampler, CriteriumSdp(sm, sampler, 100, false), 0.9, 0.1, num_samples=1000)
 # lucb_forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 100), CriteriumSdp(sm, sampler, 1000, false); time_limit=Inf, terminate_on_first_solution=true)        
-
+# c, n = batch_heuristic(II, sm, sampler, 1000)
+# println("Batch heuristic: ", length(c), " with set: ", length(n))
 
 function bernoulli_bounds_test()
     @testset "bernoulli bounds test" begin

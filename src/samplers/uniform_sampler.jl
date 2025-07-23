@@ -13,8 +13,8 @@ which simplifies the conditioning, which is crucial operation.
 
 The conditioning is
 """
-# struct UniformDistribution
-# end
+struct UniformDistribution
+end
 
 struct ConditionedUniformDistribution{P}
     p::P

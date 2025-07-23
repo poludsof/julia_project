@@ -135,12 +135,12 @@ end
 let 
     x = deserialize("mnist_proper/model_noise_forward_beamsearch.jls")[1].x;
     sampler = UniformDistribution()
-    xx = PAE.sample_all(condition(sampler, x, empty_sbitset(x)), 100)
+    xx = sample_all(condition(sampler, x, empty_sbitset(x)), 100)
     # animate_images(xx, "sample_uniform.gif")        
     save("latex/images/sample_uniform.pdf", tile_images(xx, n = 2))        
     sampler = BernoulliMixture(deserialize(joinpath("mnist_proper", "milan_centers.jls")))
     Random.seed!(1)
-    xx = PAE.sample_all(condition(sampler, x, empty_sbitset(x)), 100)
+    xx = sample_all(condition(sampler, x, empty_sbitset(x)), 100)
     save("latex/images/sample_data.pdf", tile_images(xx, n = 2))          
 end
 
@@ -245,8 +245,8 @@ end
 sampler = BernoulliMixture(centers);
 model = deserialize("mnist/binary_model.jls")
 rule, skeleton, xₛ, _ = deserialize("mnist_proper/skeleton_90.jls")
-r = PAE.condition(sampler, xₛ, rule[1])
-xx = PAE.sample_all(r, 10_000);
+r = condition(sampler, xₛ, rule[1])
+xx = sample_all(r, 10_000);
 
 l₀ = vec(mean(xx .> 0, dims = 2))
 l₁ = vec(mean(model[1:1](xx) .> 0, dims = 2))

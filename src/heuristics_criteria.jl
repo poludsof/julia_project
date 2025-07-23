@@ -37,8 +37,8 @@ end
 
 
 function accuracy_sdp(ii::SBitSet, sm, sampler, num_samples; verbose = false)
-    r = SMS.condition(sampler, sm.input, ii)
-    x = SMS.sample_all(r, num_samples)
+    r = condition(sampler, sm.input, ii)
+    x = sample_all(r, num_samples)
     accuracy_sdp(sm.nn(x), sm.output)
 end
 
@@ -116,8 +116,8 @@ end
     Frequentist heuristic equal to ratio of correct classification to number of trials
 """
 function batch_heuristic(ii::SBitSet, sm, sampler, num_samples; verbose = false)
-    r = SMS.condition(sampler, sm.input, ii)
-    x = SMS.sample_all(r, num_samples)
+    r = condition(sampler, sm.input, ii)
+    x = sample_all(r, num_samples)
     batch_heuristic(sm.input, x, iscorrect(sm.nn(x), sm.output))
 end
 
@@ -126,6 +126,7 @@ function batch_heuristic(xₛ, x, correct)
     map(cpu(c),cpu(n)) do cᵢ, nᵢ
         nᵢ == 0 ? 0.0 : cᵢ / nᵢ
     end
+    return c, n
 end
 
 """
@@ -145,8 +146,8 @@ function batch_beta(xₛ, x, correct, ϵ)
 end
 
 function batch_beta(ii::SBitSet, sm, sampler, num_samples, ϵ; verbose = false)
-    r = SMS.condition(sampler, sm.input, ii)
-    x = SMS.sample_all(r, num_samples)
+    r = condition(sampler, sm.input, ii)
+    x = sample_all(r, num_samples)
     batch_beta(sm.input, x, iscorrect(sm.nn(x), sm.output), ϵ)
 end
 
@@ -241,10 +242,10 @@ restrict_output(x::Integer, ii) = x
 function accuracy_sdp3(ii::Tuple, sm::Subset_minimal, samplers, num_samples; verbose = false)
     (I3, I2, I1) = ii
     xₛ = sm.input
-    h₃_h₂ = isvalid_sdp(I3, restrict_output(SMS.Subset_minimal(sm.nn[1], xₛ), I2), samplers[1], num_samples)
-    h₂_h₁ = isvalid_sdp(I2, restrict_output(SMS.Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), samplers[2], num_samples)
+    h₃_h₂ = isvalid_sdp(I3, restrict_output(Subset_minimal(sm.nn[1], xₛ), I2), samplers[1], num_samples)
+    h₂_h₁ = isvalid_sdp(I2, restrict_output(Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), samplers[2], num_samples)
     # println("AAAAAAAAAAAAAA")
-    h₁_h₀ = isvalid_sdp(I1, SMS.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ), argmax(sm.output)), samplers[3], num_samples)
+    h₁_h₀ = isvalid_sdp(I1, Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ), argmax(sm.output)), samplers[3], num_samples)
     # println("sm.output: ", argmax(sm.output))
     h₃_h₂ = isempty(I2) ? 0.0 : h₃_h₂
     h₂_h₁ = isempty(I1) ? 0.0 : h₂_h₁
@@ -260,9 +261,9 @@ end
 function batch_heuristic3(ii::Tuple, sm::Subset_minimal, samplers, num_samples; verbose = false)
     (I3, I2, I1) = ii
     xₛ = sm.input
-    h₃_h₂ = shapley_heuristic(I3, restrict_output(SMS.Subset_minimal(sm.nn[1], xₛ), I2), samplers[1], num_samples)
-    h₂_h₁ = shapley_heuristic(I2, restrict_output(SMS.Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), samplers[2], num_samples)
-    h₁_h₀ = shapley_heuristic(I1, SMS.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), samplers[3], num_samples)
+    h₃_h₂ = shapley_heuristic(I3, restrict_output(Subset_minimal(sm.nn[1], xₛ), I2), samplers[1], num_samples)
+    h₂_h₁ = shapley_heuristic(I2, restrict_output(Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), samplers[2], num_samples)
+    h₁_h₀ = shapley_heuristic(I1, Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), samplers[3], num_samples)
     if isempty(I2)
         h₃_h₂ .= 0.0
     end    
@@ -275,14 +276,14 @@ end
 # function shapley_heuristic(ii::Tuple, sm::Subset_minimal, sampler, num_samples; verbose = false)
 #     (I3, I2, I1) = ii
 #     (
-#         h₃ = shapley_heuristic(I3, SMS.Subset_minimal(sm.nn, xₛ), sp.sampler, sp.num_samples),
-#         h₂ = shapley_heuristic(I2, SMS.Subset_minimal(sm.nn[2:3], sm.nn[1](xₛ)), sp.sampler, sp.num_samples),
-#         h₁ = shapley_heuristic(I1, SMS.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), sp.sampler, sp.num_samples),
+#         h₃ = shapley_heuristic(I3, Subset_minimal(sm.nn, xₛ), sp.sampler, sp.num_samples),
+#         h₂ = shapley_heuristic(I2, Subset_minimal(sm.nn[2:3], sm.nn[1](xₛ)), sp.sampler, sp.num_samples),
+#         h₁ = shapley_heuristic(I1, Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), sp.sampler, sp.num_samples),
 
 #         # the input to the neural network has to imply h₃[I2] and h₂[I1] 
-#         h₃_h₂ = shapley_heuristic(I3, restrict_output(SMS.Subset_minimal(sm.nn[1], xₛ), I2), sp.sampler, sp.num_samples),
-#         h₃_h₁ = shapley_heuristic(I3, restrict_output(SMS.Subset_minimal(sm.nn[1:2], xₛ), I1), sp.sampler, sp.num_samples),
-#         h₂_h₁ = shapley_heuristic(I2, restrict_output(SMS.Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), sp.sampler, sp.num_samples),
+#         h₃_h₂ = shapley_heuristic(I3, restrict_output(Subset_minimal(sm.nn[1], xₛ), I2), sp.sampler, sp.num_samples),
+#         h₃_h₁ = shapley_heuristic(I3, restrict_output(Subset_minimal(sm.nn[1:2], xₛ), I1), sp.sampler, sp.num_samples),
+#         h₂_h₁ = shapley_heuristic(I2, restrict_output(Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), sp.sampler, sp.num_samples),
 #     )
 # end
 
@@ -299,8 +300,8 @@ function shapley_heuristic(ii::Tuple, sm::Subset_minimal, sampler, num_samples; 
     jj = foldl((r,i) -> push(r, i + sm.dims[1] + sm.dims[2]), I1, init = jj)
 
 
-    r = SMS.condition(sampler, vcat(h₃, h₂, h₁), jj)
-    x = SMS.sample_all(r, 10_000)
+    r = condition(sampler, vcat(h₃, h₂, h₁), jj)
+    x = sample_all(r, 10_000)
 
     x₃ = x[1:sm.dims[1],:]
     x₂ = x[sm.dims[1]+1:sm.dims[1]+sm.dims[2],:]
@@ -321,9 +322,9 @@ end
 function batch_heuristic3(ii::Tuple, sm::Subset_minimal, samplers, num_samples; verbose = false)
     (I3, I2, I1) = ii
     xₛ = sm.input
-    h₃_h₂ = batch_heuristic(I3, restrict_output(SMS.Subset_minimal(sm.nn[1], xₛ), I2), samplers[1], num_samples)
-    h₂_h₁ = batch_heuristic(I2, restrict_output(SMS.Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), samplers[2], num_samples)
-    h₁_h₀ = batch_heuristic(I1, SMS.Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), samplers[3], num_samples)
+    h₃_h₂ = batch_heuristic(I3, restrict_output(Subset_minimal(sm.nn[1], xₛ), I2), samplers[1], num_samples)
+    h₂_h₁ = batch_heuristic(I2, restrict_output(Subset_minimal(sm.nn[2], sm.nn[1](xₛ)), I1), samplers[2], num_samples)
+    h₁_h₀ = batch_heuristic(I1, Subset_minimal(sm.nn[3], sm.nn[1:2](xₛ)), samplers[3], num_samples)
     if isempty(I2)
         h₃_h₂ .= 0.0
     end    
@@ -355,8 +356,8 @@ function shapley_heuristic2(ii::Tuple, sm::Subset_minimal, sampler, num_samples;
     jj = foldl((r,i) -> push(r, i + sm.dims[1] + sm.dims[2]), I1, init = jj)
 
 
-    r = SMS.condition(sampler, vcat(xₛ₃, xₛ₂, xₛ₁), jj)
-    x = SMS.sample_all(r, 10_000)
+    r = condition(sampler, vcat(xₛ₃, xₛ₂, xₛ₁), jj)
+    x = sample_all(r, 10_000)
 
     x₃ = x[1:sm.dims[1],:]
     x₂ = x[sm.dims[1]+1:sm.dims[1]+sm.dims[2],:]

@@ -47,11 +47,11 @@ include("samplers/mixture_sampler.jl")
 export BernoulliMixture
 export BatchHeuristic
 
-export one_subset_backward_search, one_subset_forward_search, one_subset_beam_search
-export preprocess_binary, preprocess_bin_neg, prepare_data
-export forward_search, beam_search, backward_search
-export criterium_sdp, criterium_ep, sdp_partial, ep_partial
-export plot_mnist_image
-export accuracy_sdp3, batch_heuristic3, isvalid_sdp3, restrict_output, expand_frwd
+# export one_subset_backward_search, one_subset_forward_search, one_subset_beam_search
+# export preprocess_binary, preprocess_bin_neg, prepare_data
+# export forward_search, beam_search, backward_search
+# export criterium_sdp, criterium_ep, sdp_partial, ep_partial
+# export plot_mnist_image
+# export accuracy_sdp3, batch_heuristic3, isvalid_sdp3, restrict_output, expand_frwd
 
 end

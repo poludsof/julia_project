@@ -1,7 +1,7 @@
 function  get_image(img_i)
     xₛ = train_X_bin_neg[:, img_i] |> to_gpu
     yₛ = argmax(model(xₛ))
-    sm = PAE.Subset_minimal(to_gpu(model), xₛ, yₛ)
+    sm = Subset_minimal(to_gpu(model), xₛ, yₛ)
     xₛ, yₛ, sm
 end
 
@@ -155,7 +155,7 @@ sampler_path = "models/milan_centers.jls"
 sampler = BernoulliMixture(to_gpu(deserialize(sampler_path)))
 xₛ = train_X_bin_neg[:, 1] |> to_gpu
 yₛ = argmax(model(xₛ))
-sm = PAE.Subset_minimal(to_gpu(model), xₛ, yₛ)
+sm = Subset_minimal(to_gpu(model), xₛ, yₛ)
 II = init_sbitset(length(xₛ))
 # II = init_full_sbitset(xₛ)
 
