@@ -53,6 +53,157 @@ function compute_beta(n_features::Int, t::Real, delta::Real)
     return temp + log(temp)
 end
 
+function greedy_lucb(sm, ii::SBitSet, sample_fn, delta, epsilon; num_samples=1000)
+    anchors = expand_frwd(sm, [], [], ii, sample_fn)
+    # println("size of anchors: ", typeof(anchors), " first:" , anchors[1])
+    means, sets = map(x -> x[1], anchors), map(x -> x[2], anchors)
+    # println("Means: ", means[1])
+    # println("Sets: ", sets[1])
+
+    n_samples = fill(num_samples, length(anchors))  ###! modify
+    ub = zeros(length(anchors))
+    lb = zeros(length(anchors))
+    top_n = 2 # number of top features to consider
+    t = 1
+    n_features = length(anchors)
+
+    function update_bounds(t::Integer)
+        inds = sortperm(anchors, by = x -> x[1])
+
+        beta = compute_beta(n_features, t, delta)
+
+        # split indexes into top_n best and others
+        J = inds[end - top_n + 1:end]
+        not_J = inds[1:end - top_n]
+
+        for f in not_J
+            ub[f] = dup_bernoulli(anchors[f][1], beta / n_samples[f])
+        end
+        for f in J
+            lb[f] = dlow_bernoulli(anchors[f][1], beta / n_samples[f])
+        end
+
+        ut = not_J[argmax(ub[not_J])]
+        lt = J[argmin(lb[J])]
+
+        return ut, lt
+    end
+
+    #calculate bounds
+    ut, lt = update_bounds(t)
+    # println("Initial bounds: ut: $(ut) with ub: $(ub[ut]), lt: $(lt) with lb: $(lb[lt])")
+    while ub[ut] - lb[lt] > epsilon
+        # println("while ", ub[ut] - lb[lt], " > ", epsilon)
+
+        # println("means before: ", means[lt])
+        new_mean_ut = sample_fn(sets[ut])
+        means[ut] = (n_samples[ut] * means[ut] + num_samples * new_mean_ut) / (n_samples[ut] + num_samples)
+        n_samples[ut] += num_samples
+
+        new_mean_lt = sample_fn(sets[lt])
+        means[lt] = (n_samples[lt] * means[lt] + num_samples * new_mean_lt) / (n_samples[lt] + num_samples)
+        n_samples[lt] += num_samples
+        # println("means new: ", new_mean_lt)
+        # println("means after: ", means[lt])
+
+        t += 1
+        ut, lt = update_bounds(t)
+        # println("Updated bounds: ut: $(ut) with ub: $(ub[ut]), lt: $(lt) with lb: $(lb[lt])")
+    end
+    # println("Final bounds: ut: $(ut) with ub: $(ub[ut]), lt: $(lt) with lb: $(lb[lt])")
+    # println("returning: ", sets[ut], " with mean: ", means[ut], " and ud:", ub[ut])
+    return means[ut], sets[ut]
+end
+
+function lucb_forward_search(sm, ii::SBitSet, isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true, num_samples=1000)
+    println("forward_search_lucb")
+    initial_heuristic = heuristic_fun(ii)
+
+    if typeof(initial_heuristic) == Tuple
+        initial_h, initial_hmax_err = initial_heuristic
+    elseif typeof(initial_heuristic) == Number 
+        initial_h = initial_heuristic
+    else
+        initial_h = sum(initial_heuristic)
+    end
+    println("Initial h: ", initial_h)
+
+    stack = [(initial_h, ii)]
+    closed_list = Set{SBitSet}()
+    solutions = Set{SBitSet}()
+
+    steps = 0
+    start_time = time()
+    smallest_solution = typemax(Int)
+
+    while !isempty(stack)
+
+        steps += 1
+        if time() - start_time > time_limit
+            println("Timeout exceeded, returning last found solutions")
+            return steps, solutions
+        end
+
+        sort!(stack, by = x -> -x[1])
+        current_h, ii = pop!(stack)
+        closed_list = push!(closed_list, ii)
+
+        v = @timeit to "isvalid" isvalid(ii)
+        # println("isvalid: ", v)
+
+        if v
+            println("Valid subset found...")
+            push!(solutions, ii)
+            if terminate_on_first_solution
+                println("Terminating on first solution")
+                return solutions
+            end
+            continue
+        end
+
+        println("step: $steps, length $(solution_length(ii)) with mean: ", current_h)
+        push!(stack, greedy_lucb(sm, ii, heuristic_fun, 0.9, 0.1, num_samples=num_samples))
+    end
+
+    println("Stack is empty")
+    return solutions
+end
+
+
+img_i = 1
+xₛ = train_X_bin_neg[:, img_i]
+yₛ = argmax(model(xₛ))
+II = init_sbitset(length(xₛ))
+sm = PAE.Subset_minimal(model, xₛ, yₛ)
+greedy_lucb(sm, II, CriteriumSdp(sm, sampler, 1000, false), 0.9, 0.1, num_samples=1000)
+lucb_forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 1000), CriteriumSdp(sm, sampler, 1000, false); terminate_on_first_solution=true)
+
+
+function bernoulli_bounds_test()
+    @testset "bernoulli bounds test" begin
+        println("testing KL bounds")
+        for p in 0.1:0.1:0.9
+            confidence = 0.9
+            lower = dlow_bernoulli(p, confidence)
+            upper = dup_bernoulli(p, confidence)
+            println("p: $p, lower: $lower, upper: $upper, confidence: $confidence")
+            
+            # p must be within the interval
+            @test lower ≤ p ≤ upper
+            
+            println("KL lower bound: ", kl_bernoulli(p, lower))
+            println("KL upper bound: ", kl_bernoulli(p, upper))
+        end
+    end
+end
+
+# bernoulli_bounds_test()
+
+
+
+
+#################################################
+
 function fill_missing_samples(sample_fn, n_samples, positives, means, anchor_sets)
         for i in eachindex(n_samples)
         if n_samples[i] == 0
@@ -67,6 +218,7 @@ function greedy_lucb(sm, ii::SBitSet, sample_fn, delta, epsilon; sampler=Uniform
     positives, n_samples = batch_sampl_heuristic(ii, sm, sampler, num_samples)
     anchor_sets = PAE.new_subsets_fwrd(ii, sm.dims)
 
+    # remove means of anchor sets that are in the current ii
     mask = trues(length(positives))
     mask[collect(ii)] .= false
     positives = positives[mask]
@@ -74,8 +226,9 @@ function greedy_lucb(sm, ii::SBitSet, sample_fn, delta, epsilon; sampler=Uniform
 
     means = positives ./ n_samples
     fill_missing_samples(sample_fn, n_samples, positives, means, anchor_sets)
-    # println("Means: ", length(means))
-    # println("anchor_sets: ", length(anchor_sets))
+    # println("positives: ", positives[1:3])
+    # println("n_samples: ", n_samples[1:3])
+    # println("means: ", means[1:3])
 
     ub = zeros(length(anchor_sets))
     lb = zeros(length(anchor_sets))
@@ -83,10 +236,11 @@ function greedy_lucb(sm, ii::SBitSet, sample_fn, delta, epsilon; sampler=Uniform
     t = 1
     n_features = length(anchor_sets)
 
-    println(length(n_samples), " ", length(positives), " ", length(means), " ", length(anchor_sets))
+    # println(length(n_samples), " ", length(positives), " ", length(means), " ", length(anchor_sets))
 
     function update_bounds(t::Integer)
         inds = sortperm(means)
+        # println("indis: ", inds[1:3], " means: ", means[inds[1:3]])
         
         beta = compute_beta(n_features, t, delta)
         
@@ -113,7 +267,6 @@ function greedy_lucb(sm, ii::SBitSet, sample_fn, delta, epsilon; sampler=Uniform
     while ub[ut] - lb[lt] > epsilon
         # println("while ", ub[ut] - lb[lt], " > ", epsilon)
     
-        # println("means before: ", means[lt])
         new_mean_ut = sample_fn(anchor_sets[ut])
         means[ut] = (n_samples[ut] * means[ut] + num_samples * new_mean_ut) / (n_samples[ut] + num_samples)
         n_samples[ut] += num_samples
@@ -123,8 +276,6 @@ function greedy_lucb(sm, ii::SBitSet, sample_fn, delta, epsilon; sampler=Uniform
         means[lt] = (n_samples[lt] * means[lt] + num_samples * new_mean_lt) / (n_samples[lt] + num_samples)
         n_samples[lt] += num_samples
         positives[lt] += num_samples * new_mean_lt
-        # println("means new: ", new_mean_lt)
-        # println("means after: ", means[lt])
 
         t += 1
         ut, lt = update_bounds(t)
@@ -161,7 +312,7 @@ function lucb_forward_search(sm, ii::SBitSet, isvalid::Function, heuristic_fun; 
         steps += 1
         if time() - start_time > time_limit
             println("Timeout exceeded, returning last found solutions")
-            return steps, solutions
+            return solutions
         end
 
         sort!(stack, by = x -> -x[1])
@@ -182,12 +333,13 @@ function lucb_forward_search(sm, ii::SBitSet, isvalid::Function, heuristic_fun; 
         end
 
         println("step: $steps, length $(solution_length(ii)) with mean: ", current_h)
-        push!(stack, greedy_lucb(sm, ii, heuristic_fun, 0.9, 0.1, num_samples=num_samples))
+        stack = push!(stack, greedy_lucb(sm, ii, heuristic_fun, 0.9, 0.1, num_samples=num_samples))
     end
 
     println("Stack is empty")
     return solutions
 end
+
 
 sampler = UniformDistribution()
 img_i = 1
@@ -196,29 +348,7 @@ yₛ = argmax(model(xₛ))
 II = init_sbitset(length(xₛ))
 sm = Subset_minimal(model, xₛ, yₛ)
 
-II = push(II, 1)
-greedy_lucb(sm, II, CriteriumSdp(sm, sampler, 100, false), 0.9, 0.1, num_samples=1000)
+# II = push(II, 1)
+# greedy_lucb(sm, II, CriteriumSdp(sm, sampler, 100, false), 0.9, 0.1, num_samples=1000)
 lucb_forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 100), CriteriumSdp(sm, sampler, 1000, false); terminate_on_first_solution=true)        
 
-
-
-
-function bernoulli_bounds_test()
-    @testset "bernoulli bounds test" begin
-        println("testing KL bounds")
-        for p in 0.1:0.1:0.9
-            confidence = 0.9
-            lower = dlow_bernoulli(p, confidence)
-            upper = dup_bernoulli(p, confidence)
-            println("p: $p, lower: $lower, upper: $upper, confidence: $confidence")
-            
-            # p must be within the interval
-            @test lower ≤ p ≤ upper
-            
-            println("KL lower bound: ", kl_bernoulli(p, lower))
-            println("KL upper bound: ", kl_bernoulli(p, upper))
-        end
-    end
-end
-
-# bernoulli_bounds_test()
