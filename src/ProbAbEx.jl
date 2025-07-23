@@ -53,5 +53,6 @@ export BatchHeuristic
 # export criterium_sdp, criterium_ep, sdp_partial, ep_partial
 # export plot_mnist_image
 # export accuracy_sdp3, batch_heuristic3, isvalid_sdp3, restrict_output, expand_frwd
+export condition
 
 end

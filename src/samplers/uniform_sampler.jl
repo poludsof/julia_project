@@ -20,7 +20,7 @@ struct ConditionedUniformDistribution{P}
     p::P
 end
 
-function condition(r::UniformDistribution, xₛ, known_ii::SBitSet)
+function condition(r, xₛ, known_ii::SBitSet)
     ii = collect(known_ii)
     p = fill(0.5f0, length(xₛ))
     p[ii] .= (xₛ[ii] .> 0.5)

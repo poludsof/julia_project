@@ -63,18 +63,28 @@ function fill_missing_samples(sample_fn, n_samples, positives, means, anchor_set
     end
 end
 
-function greedy_lucb(sm, ii::SBitSet, sampler, sample_fn, delta, epsilon; num_samples=1000)
-    positives, n_samples = batch_heuristic(ii, sm, sampler, num_samples)
+function greedy_lucb(sm, ii::SBitSet, sample_fn, delta, epsilon; sampler=UniformDistribution(), num_samples=1000)
+    positives, n_samples = batch_sampl_heuristic(ii, sm, sampler, num_samples)
     anchor_sets = PAE.new_subsets_fwrd(ii, sm.dims)
+
+    mask = trues(length(positives))
+    mask[collect(ii)] .= false
+    positives = positives[mask]
+    n_samples = n_samples[mask]
+
     means = positives ./ n_samples
     fill_missing_samples(sample_fn, n_samples, positives, means, anchor_sets)
+    # println("Means: ", length(means))
+    # println("anchor_sets: ", length(anchor_sets))
 
     ub = zeros(length(anchor_sets))
     lb = zeros(length(anchor_sets))
     top_n = 2 # number of top features to consider
     t = 1
     n_features = length(anchor_sets)
-    
+
+    println(length(n_samples), " ", length(positives), " ", length(means), " ", length(anchor_sets))
+
     function update_bounds(t::Integer)
         inds = sortperm(means)
         
@@ -126,7 +136,7 @@ function greedy_lucb(sm, ii::SBitSet, sampler, sample_fn, delta, epsilon; num_sa
 end
 
 
-function lucb_forward_search(sm, ii::SBitSet, isvalid::Function, heuristic_fun; time_limit=Inf, terminate_on_first_solution=true, num_samples=1000)
+function lucb_forward_search(sm, ii::SBitSet, isvalid::Function, heuristic_fun; sampler=UniformDistribution(), time_limit=Inf, terminate_on_first_solution=true, num_samples=1000)
     println("forward_search_lucb")
     initial_heuristic = heuristic_fun(ii)
 
@@ -145,7 +155,6 @@ function lucb_forward_search(sm, ii::SBitSet, isvalid::Function, heuristic_fun; 
 
     steps = 0
     start_time = time()
-    smallest_solution = typemax(Int)
 
     while !isempty(stack)
 
@@ -180,17 +189,19 @@ function lucb_forward_search(sm, ii::SBitSet, isvalid::Function, heuristic_fun; 
     return solutions
 end
 
-
 sampler = UniformDistribution()
 img_i = 1
 xₛ = train_X_bin_neg[:, img_i]
 yₛ = argmax(model(xₛ))
 II = init_sbitset(length(xₛ))
 sm = Subset_minimal(model, xₛ, yₛ)
-greedy_lucb(sm, II, sampler, CriteriumSdp(sm, sampler, 100, false), 0.9, 0.1, num_samples=1000)
-# lucb_forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 100), CriteriumSdp(sm, sampler, 1000, false); time_limit=Inf, terminate_on_first_solution=true)        
-# c, n = batch_heuristic(II, sm, sampler, 1000)
-# println("Batch heuristic: ", length(c), " with set: ", length(n))
+
+II = push(II, 1)
+greedy_lucb(sm, II, CriteriumSdp(sm, sampler, 100, false), 0.9, 0.1, num_samples=1000)
+lucb_forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 100), CriteriumSdp(sm, sampler, 1000, false); terminate_on_first_solution=true)        
+
+
+
 
 function bernoulli_bounds_test()
     @testset "bernoulli bounds test" begin

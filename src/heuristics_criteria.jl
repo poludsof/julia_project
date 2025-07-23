@@ -88,6 +88,8 @@ function iscorrect(ŷ::AbstractMatrix, y::AbstractVector)
     .!maximum(ŷ .!= y, dims = 1)
 end
 
+
+
 """
     (c, n) = batch_matches(xₛ, x, correct)
 
@@ -109,6 +111,13 @@ function batch_matches(xₛ::AbstractVector, x::AbstractMatrix, correct::Abstrac
     return(c, n)
 end
 
+function batch_sampl_heuristic(ii::SBitSet, sm, sampler, num_samples; verbose = false)
+    r = condition(sampler, sm.input, ii)
+    x = sample_all(r, num_samples)
+    c, n = batch_matches(sm.input, x, iscorrect(sm.nn(x), sm.output))
+    return vec(c), vec(n)
+end
+
 
 """
     batch_heuristic(ii::SBitSet, sm, sampler, num_samples; verbose = false)
@@ -126,7 +135,6 @@ function batch_heuristic(xₛ, x, correct)
     map(cpu(c),cpu(n)) do cᵢ, nᵢ
         nᵢ == 0 ? 0.0 : cᵢ / nᵢ
     end
-    return vec(c), vec(n)
 end
 
 """
