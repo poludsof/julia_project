@@ -53,7 +53,7 @@ function compute_beta(n_features::Int, t::Real, delta::Real)
     return temp + log(temp)
 end
 
-function fill_missing_samples(sample_fn, n_samples, positives, means, anchor_sets::Vector)
+function fill_missing_samples(sample_fn, n_samples, positives, means, anchor_sets)
         for i in eachindex(n_samples)
         if n_samples[i] == 0
             means[i] = sample_fn(anchor_sets[i])
@@ -69,26 +69,26 @@ function greedy_lucb(sm, ii::SBitSet, sampler, sample_fn, delta, epsilon; num_sa
     means = positives ./ n_samples
     fill_missing_samples(sample_fn, n_samples, positives, means, anchor_sets)
 
-    ub = zeros(length(anchors))
-    lb = zeros(length(anchors))
+    ub = zeros(length(anchor_sets))
+    lb = zeros(length(anchor_sets))
     top_n = 2 # number of top features to consider
     t = 1
-    n_features = length(anchors)
+    n_features = length(anchor_sets)
     
     function update_bounds(t::Integer)
-        inds = sortperm(anchors, by = x -> x[1])
+        inds = sortperm(means)
         
         beta = compute_beta(n_features, t, delta)
         
-        # split indexes into top_n best and others
+        # split indexes into top_n with best mean and others
         J = inds[end - top_n + 1:end]
         not_J = inds[1:end - top_n]
         
         for f in not_J
-            ub[f] = dup_bernoulli(anchors[f][1], beta / n_samples[f])
+            ub[f] = dup_bernoulli(means[f], beta / n_samples[f])
         end
         for f in J
-            lb[f] = dlow_bernoulli(anchors[f][1], beta / n_samples[f])
+            lb[f] = dlow_bernoulli(means[f], beta / n_samples[f])
         end
         
         ut = not_J[argmax(ub[not_J])]
@@ -104,13 +104,15 @@ function greedy_lucb(sm, ii::SBitSet, sampler, sample_fn, delta, epsilon; num_sa
         # println("while ", ub[ut] - lb[lt], " > ", epsilon)
     
         # println("means before: ", means[lt])
-        new_mean_ut = sample_fn(sets[ut])
+        new_mean_ut = sample_fn(anchor_sets[ut])
         means[ut] = (n_samples[ut] * means[ut] + num_samples * new_mean_ut) / (n_samples[ut] + num_samples)
         n_samples[ut] += num_samples
+        positives[ut] += num_samples * new_mean_ut
 
-        new_mean_lt = sample_fn(sets[lt])
+        new_mean_lt = sample_fn(anchor_sets[lt])
         means[lt] = (n_samples[lt] * means[lt] + num_samples * new_mean_lt) / (n_samples[lt] + num_samples)
         n_samples[lt] += num_samples
+        positives[lt] += num_samples * new_mean_lt
         # println("means new: ", new_mean_lt)
         # println("means after: ", means[lt])
 
@@ -119,8 +121,8 @@ function greedy_lucb(sm, ii::SBitSet, sampler, sample_fn, delta, epsilon; num_sa
         # println("Updated bounds: ut: $(ut) with ub: $(ub[ut]), lt: $(lt) with lb: $(lb[lt])")
     end
     # println("Final bounds: ut: $(ut) with ub: $(ub[ut]), lt: $(lt) with lb: $(lb[lt])")
-    # println("returning: ", sets[ut], " with mean: ", means[ut], " and ud:", ub[ut])
-    return means[ut], sets[ut]
+    # println("returning: ", anchor_sets[ut], " with mean: ", means[ut], " and ud:", ub[ut])
+    return means[ut], anchor_sets[ut]
 end
 
 

@@ -126,7 +126,7 @@ function batch_heuristic(xₛ, x, correct)
     map(cpu(c),cpu(n)) do cᵢ, nᵢ
         nᵢ == 0 ? 0.0 : cᵢ / nᵢ
     end
-    return c, n
+    return vec(c), vec(n)
 end
 
 """
