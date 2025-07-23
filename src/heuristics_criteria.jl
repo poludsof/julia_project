@@ -114,7 +114,8 @@ end
 function batch_sampl_heuristic(ii::SBitSet, sm, sampler, num_samples; verbose = false)
     r = condition(sampler, sm.input, ii)
     x = sample_all(r, num_samples)
-    c, n = batch_matches(sm.input, x, iscorrect(sm.nn(x), sm.output))
+    c, n = batch_matches(sm.input, x, iscorrect(argmax(sm.nn(x), dims=1), sm.output))
+    # c, n = batch_matches(sm.input, x, iscorrect(sm.nn(x), sm.output))
     return vec(c), vec(n)
 end
 

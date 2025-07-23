@@ -214,7 +214,7 @@ function fill_missing_samples(sample_fn, n_samples, positives, means, anchor_set
     end
 end
 
-function greedy_lucb(sm, ii::SBitSet, sample_fn, delta, epsilon; sampler=UniformDistribution(), num_samples=1000)
+function greedy_lucb_batch(sm, ii::SBitSet, sample_fn, delta, epsilon; sampler=UniformDistribution(), num_samples=1000)
     positives, n_samples = batch_sampl_heuristic(ii, sm, sampler, num_samples)
     anchor_sets = PAE.new_subsets_fwrd(ii, sm.dims)
 
@@ -287,8 +287,8 @@ function greedy_lucb(sm, ii::SBitSet, sample_fn, delta, epsilon; sampler=Uniform
 end
 
 
-function lucb_forward_search(sm, ii::SBitSet, isvalid::Function, heuristic_fun; sampler=UniformDistribution(), time_limit=Inf, terminate_on_first_solution=true, num_samples=1000)
-    println("forward_search_lucb")
+function lucb_batch_forward_search(sm, ii::SBitSet, isvalid::Function, heuristic_fun; sampler=UniformDistribution(), time_limit=Inf, terminate_on_first_solution=true, num_samples=1000)
+    println("forward_search_lucb_batch")
     initial_heuristic = heuristic_fun(ii)
 
     if typeof(initial_heuristic) == Tuple
@@ -348,7 +348,6 @@ yₛ = argmax(model(xₛ))
 II = init_sbitset(length(xₛ))
 sm = Subset_minimal(model, xₛ, yₛ)
 
-# II = push(II, 1)
-# greedy_lucb(sm, II, CriteriumSdp(sm, sampler, 100, false), 0.9, 0.1, num_samples=1000)
-lucb_forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 100), CriteriumSdp(sm, sampler, 1000, false); terminate_on_first_solution=true)        
+greedy_lucb_batch(sm, II, CriteriumSdp(sm, sampler, 100, false), 0.9, 0.1, num_samples=1000)
+lucb_batch_forward_search(sm, II, ii -> isvalid_sdp(ii, sm, ϵ, sampler, 100), CriteriumSdp(sm, sampler, 1000, false); terminate_on_first_solution=true)        
 
