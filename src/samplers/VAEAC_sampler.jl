@@ -128,3 +128,24 @@ end
 
 # ========== Run training ==========
 proposal_net, prior_net, decoder_net = train()
+
+function sample_and_save(proposal_net, prior_net, decoder_net)
+    x = rand(Float32, 784, 1)
+    mask = falses(784, 1)  # Hide all pixels
+    logits, _, _, _, _ = forward(x, mask, proposal_net, prior_net, decoder_net)
+    x_hat = σ.(logits)
+
+    # img = Gray.(reshape(x_hat[:, 1], 28, 28))
+    # save("reconstructed.png", img)
+    fig = Figure(size = (400, 400))
+    img = reshape(x_hat[:, 1], 28, 28)
+
+    ax1 = Axis(fig[1, 1], title = "Original MNIST Digit", yreversed = true, aspect = DataAspect())
+    image!(ax1, img, colormap = :grays, interpolate = false)
+    hidespines!(ax1)
+    hidedecorations!(ax1)
+
+    fig
+end
+
+fig = sample_and_save(proposal_net, prior_net, decoder_net)
