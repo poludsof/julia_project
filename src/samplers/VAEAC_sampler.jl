@@ -14,8 +14,8 @@ input_dim = 28 * 28
 latent_dim = 20
 hidden_dim = 400
 batch_size = 100
-epochs = 10
-lr = 1e-3
+epochs = 30
+learning_rate = 1e-3
 
 # ========== Load & binarize MNIST ==========
 function load_binary_mnist()
@@ -30,7 +30,7 @@ function generate_mask(size_tuple)
     return Float32.(rand(Bool, size_tuple))
 end
 
-# ========== KL divergence for diagonal Gaussians ==========
+# ========== KL divergence ==========
 function kl_div_diag_gaussians(μq, logσq, μp, logσp)
     σq2 = exp.(2f0 .* logσq)
     σp2 = exp.(2f0 .* logσp)
@@ -102,7 +102,7 @@ end
 function train()
     proposal_net, prior_net, decoder_net = create_model()
     ps = Flux.params(proposal_net, prior_net, decoder_net)
-    opt = Adam(lr)
+    opt = Adam(learning_rate)
     data = load_binary_mnist()
 
     for epoch in 1:epochs
@@ -130,32 +130,9 @@ end
 # ========== Run training ==========
 proposal_net, prior_net, decoder_net = train()
 
-function sample_and_save(proposal_net, prior_net, decoder_net)
-    x = rand(Float32, 784, 1)
-    mask = falses(784, 1)  # Hide all pixels
-    logits, _, _, _, _ = forward(x, mask, proposal_net, prior_net, decoder_net)
-    x_hat = σ.(logits)
 
-    # img = Gray.(reshape(x_hat[:, 1], 28, 28))
-    # save("reconstructed.png", img)
-    fig = Figure(size = (400, 400))
-    img = reshape(x_hat[:, 1], 28, 28)
-
-    ax1 = Axis(fig[1, 1], title = "Original MNIST Digit", yreversed = true, aspect = DataAspect())
-    image!(ax1, img, colormap = :grays, interpolate = false)
-    hidespines!(ax1)
-    hidedecorations!(ax1)
-
-    fig
-end
-
-fig = sample_and_save(proposal_net, prior_net, decoder_net)
-
-function sample_and_save2(x, proposal_net, prior_net, decoder_net; binary=true)
-    mask = falses(784, 1)
-    mask[100:150] .= true
-    mask[600:601] .= true
-    mask[400:401] .= true
+# ========== Sample function ==========
+function sample_and_save2(x, mask, proposal_net, prior_net, decoder_net; binary=true)
 
     logits, _, _, _, _ = forward(x, mask, proposal_net, prior_net, decoder_net)
     x_hat = σ.(logits)
@@ -187,5 +164,9 @@ function sample_and_save2(x, proposal_net, prior_net, decoder_net; binary=true)
     fig
 end
 
+mask = falses(784, 1)
+mask[500:550] .= true
+mask[600:601] .= true
+mask[400:401] .= true
 x = load_binary_mnist()[:, 1]
-fig = sample_and_save2(x, proposal_net, prior_net, decoder_net, binary = true)
+fig = sample_and_save2(x, mask, proposal_net, prior_net, decoder_net, binary = true)
