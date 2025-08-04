@@ -8,14 +8,44 @@ using MLUtils: eachbatch
 using Flux.Optimise: update!, Adam
 using CairoMakie
 import ProbAbEx as PAE
+using Serialization
+
+# ========== Model Definition ==========
+struct VAEAC
+    proposal_net::Chain
+    prior_net::Chain
+    decoder_net::Chain
+end
+
+function VAEAC()
+    proposal_net = Chain(
+        Dense(2 * input_dim, hidden_dim, relu),
+        Dense(hidden_dim, hidden_dim, relu),
+        Dense(hidden_dim, 2 * latent_dim)
+    )
+
+    prior_net = Chain(
+        Dense(input_dim, hidden_dim, relu),
+        Dense(hidden_dim, hidden_dim, relu),
+        Dense(hidden_dim, 2 * latent_dim)
+    )
+
+    decoder_net = Chain(
+        Dense(latent_dim + input_dim, hidden_dim, relu),
+        Dense(hidden_dim, hidden_dim, relu),
+        Dense(hidden_dim, input_dim)
+    )
+    VAEAC(proposal_net, prior_net, decoder_net)
+end
+
 
 # ========== Hyperparameters ==========
 input_dim = 28 * 28
 latent_dim = 20
 hidden_dim = 400
 batch_size = 100
-epochs = 30
-learning_rate = 1e-3
+epochs = 20
+learning_rate = 0.001
 
 # ========== Load & binarize MNIST ==========
 function load_binary_mnist()
@@ -40,54 +70,31 @@ function kl_div_diag_gaussians(μq, logσq, μp, logσp)
     return kl
 end
 
-# ========== Model Definition ==========
-function create_model()
-    proposal_net = Chain(
-        Dense(2 * input_dim, hidden_dim, relu),
-        Dense(hidden_dim, hidden_dim, relu),
-        Dense(hidden_dim, 2 * latent_dim)
-    )
-
-    prior_net = Chain(
-        Dense(input_dim, hidden_dim, relu),
-        Dense(hidden_dim, hidden_dim, relu),
-        Dense(hidden_dim, 2 * latent_dim)
-    )
-
-    decoder_net = Chain(
-        Dense(latent_dim + input_dim, hidden_dim, relu),
-        Dense(hidden_dim, hidden_dim, relu),
-        Dense(hidden_dim, input_dim)
-    )
-
-    return proposal_net, prior_net, decoder_net
-end
-
 # ========== Forward pass ==========
-function forward(x, mask, proposal_net, prior_net, decoder_net)
+function forward(x, mask, model::VAEAC)
     x_masked = x .* mask
     xb = vcat(x_masked, mask)
 
-    proposal_out = proposal_net(xb)
+    proposal_out = model.proposal_net(xb)
     μ_q = proposal_out[1:latent_dim, :]
     logσ_q = proposal_out[latent_dim+1:end, :]
 
     ε = randn(Float32, latent_dim, size(x, 2))
     z = μ_q .+ exp.(logσ_q) .* ε
 
-    prior_out = prior_net(mask)
+    prior_out = model.prior_net(mask)
     μ_p = prior_out[1:latent_dim, :]
     logσ_p = prior_out[latent_dim+1:end, :]
 
     decoder_input = vcat(z, mask)
-    logits = decoder_net(decoder_input)
+    logits = model.decoder_net(decoder_input)
 
     return logits, μ_q, logσ_q, μ_p, logσ_p
 end
 
 # ========== Loss function ==========
-function loss_fn(x, mask, proposal_net, prior_net, decoder_net)
-    logits, μ_q, logσ_q, μ_p, logσ_p = forward(x, mask, proposal_net, prior_net, decoder_net)
+function loss_fn(x, mask, model::VAEAC)
+    logits, μ_q, logσ_q, μ_p, logσ_p = forward(x, mask, model)
     recon_loss = sum(Flux.binarycrossentropy.(σ.(logits), x) .* (1f0 .- mask)) / size(x, 2)
 
     kl = 0f0
@@ -100,8 +107,8 @@ end
 
 # ========== Training ==========
 function train()
-    proposal_net, prior_net, decoder_net = create_model()
-    ps = Flux.params(proposal_net, prior_net, decoder_net)
+    model = VAEAC()
+    ps = Flux.params(model.proposal_net, model.prior_net, model.decoder_net)
     opt = Adam(learning_rate)
     data = load_binary_mnist()
 
@@ -113,28 +120,28 @@ function train()
             mask = generate_mask(size(x_batch))
 
             grads = gradient(ps) do
-                loss_fn(x_batch, mask, proposal_net, prior_net, decoder_net)
+                loss_fn(x_batch, mask, model)
             end
 
             update!(opt, ps, grads)
 
-            total_loss += loss_fn(x_batch, mask, proposal_net, prior_net, decoder_net)
+            total_loss += loss_fn(x_batch, mask, model)
             batches += 1
         end
 
         @info "Epoch $epoch, Avg loss: $(total_loss / batches)"
     end
-    return proposal_net, prior_net, decoder_net
+    return model
 end
 
 # ========== Run training ==========
-proposal_net, prior_net, decoder_net = train()
+model = train()
 
 
 # ========== Sample function ==========
-function sample_and_save2(x, mask, proposal_net, prior_net, decoder_net; binary=true)
+function sample_and_save2(x, mask, model; binary=true)
 
-    logits, _, _, _, _ = forward(x, mask, proposal_net, prior_net, decoder_net)
+    logits, _, _, _, _ = forward(x, mask, model)
     x_hat = σ.(logits)
 
     grayscale_image = reshape(x_hat[:, 1], 28, 28)
@@ -169,4 +176,6 @@ mask[500:550] .= true
 mask[600:601] .= true
 mask[400:401] .= true
 x = load_binary_mnist()[:, 1]
-fig = sample_and_save2(x, mask, proposal_net, prior_net, decoder_net, binary = true)
+fig = sample_and_save2(x, mask, model, binary = true)
+
+serialize("vaeac_model.jls", model)
