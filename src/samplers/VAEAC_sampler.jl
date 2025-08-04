@@ -148,12 +148,13 @@ function sample_and_save(proposal_net, prior_net, decoder_net)
     fig
 end
 
-using Colors
+fig = sample_and_save(proposal_net, prior_net, decoder_net)
 
 function sample_and_save2(proposal_net, prior_net, decoder_net)
     x = rand(Float32, 784, 1)
-    mask = falses(Bool, 784, 1)
-    mask[100:150] .= true  # для примера: скрываем часть пикселей
+    mask = falses(784, 1)
+    mask[100:101] .= true  # для примера: скрываем часть пикселей
+    mask[600:601] .= true  # для примера: скрываем часть пикселей
 
     logits, _, _, _, _ = forward(x, mask, proposal_net, prior_net, decoder_net)
     x_hat = σ.(logits)
@@ -161,25 +162,25 @@ function sample_and_save2(proposal_net, prior_net, decoder_net)
     grayscale_image = reshape(x_hat[:, 1], 28, 28)
     mask_image = reshape(mask[:, 1], 28, 28)
 
-    color_image = Array{RGB{N0f8}}(undef, 28, 28)
+    color_image = Array{RGBf}(undef, 28, 28)
 
     for i in 1:28, j in 1:28
         if mask_image[i, j]
-            color_image[i, j] = RGB{N0f8}(1, 0, 0)  # красный
+            color_image[i, j] = RGBf(1, 0, 0)  # красный
         else
-            gray_val = N0f8(grayscale_image[i, j])
-            color_image[i, j] = RGB{N0f8}(gray_val, gray_val, gray_val)
+            gray_val = clamp(grayscale_image[i, j], 0f0, 1f0)
+            color_image[i, j] = RGBf(gray_val, gray_val, gray_val)
         end
     end
 
     fig = Figure(size = (400, 400))
     ax = Axis(fig[1, 1], title = "Masked MNIST Reconstruction", yreversed = true, aspect = DataAspect())
-    image!(ax, color_image)
+    image!(ax, color_image, interpolate = false)
     hidespines!(ax)
     hidedecorations!(ax)
 
     fig
 end
 
-
-fig = sample_and_save(proposal_net, prior_net, decoder_net)
+xₛ = train_X_bin_neg[:, 1]
+fig = sample_and_save2(proposal_net, prior_net, decoder_net)
