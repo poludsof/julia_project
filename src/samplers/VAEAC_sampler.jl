@@ -7,6 +7,7 @@ using Distributions
 using MLUtils: eachbatch
 using Flux.Optimise: update!, Adam
 using CairoMakie
+import ProbAbEx as PAE
 
 # ========== Hyperparameters ==========
 input_dim = 28 * 28
@@ -18,7 +19,7 @@ lr = 1e-3
 
 # ========== Load & binarize MNIST ==========
 function load_binary_mnist()
-    train_x, _ = MNIST.traindata()
+    train_x, _ = MNIST(split=:train)[:]
     train_x = Float32.(reshape(train_x, :, size(train_x, 3)) .> 0.5)  # binarize
     return train_x
 end
@@ -150,17 +151,21 @@ end
 
 fig = sample_and_save(proposal_net, prior_net, decoder_net)
 
-function sample_and_save2(proposal_net, prior_net, decoder_net)
-    x = rand(Float32, 784, 1)
+function sample_and_save2(x, proposal_net, prior_net, decoder_net; binary=true)
     mask = falses(784, 1)
-    mask[100:101] .= true  # для примера: скрываем часть пикселей
-    mask[600:601] .= true  # для примера: скрываем часть пикселей
+    mask[100:150] .= true
+    mask[600:601] .= true
+    mask[400:401] .= true
 
     logits, _, _, _, _ = forward(x, mask, proposal_net, prior_net, decoder_net)
     x_hat = σ.(logits)
 
     grayscale_image = reshape(x_hat[:, 1], 28, 28)
     mask_image = reshape(mask[:, 1], 28, 28)
+
+    if binary
+        grayscale_image .= ifelse.(grayscale_image .> 0.5, 1f0, 0f0)
+    end
 
     color_image = Array{RGBf}(undef, 28, 28)
 
@@ -182,5 +187,5 @@ function sample_and_save2(proposal_net, prior_net, decoder_net)
     fig
 end
 
-xₛ = train_X_bin_neg[:, 1]
-fig = sample_and_save2(proposal_net, prior_net, decoder_net)
+x = load_binary_mnist()[:, 1]
+fig = sample_and_save2(x, proposal_net, prior_net, decoder_net, binary = true)
