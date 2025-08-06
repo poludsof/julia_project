@@ -64,7 +64,7 @@ end
 
 # ========== Mask generation ==========
 function generate_mask(size_tuple)
-    # Create random binary mask with 0.5 probability known
+    # create random binary mask with 0.5 probability known
     return Float32.(rand(Bool, size_tuple))
 end
 
@@ -143,10 +143,11 @@ function train()
 end
 
 # ========== Run training ==========
-# model = train()
+model = train()
+serialize("vaeac_model_25.jls", model)
 
 # ========== Sample function ==========
-function sample_and_save2(x, mask, model; binary=true)
+function sample_and_save(x, mask, model; binary=true)
 
     logits, _, _, _, _ = forward(x, mask, model)
     x_hat = σ.(logits)
@@ -162,9 +163,14 @@ function sample_and_save2(x, mask, model; binary=true)
 
     for i in 1:28, j in 1:28
         if mask_image[i, j]
-            color_image[i, j] = RGBf(1, 0, 0)  # красный
+            # color_image[i, j] = RGBf(1, 0, 0)
+            if x[(j-1)*28 + i, 1] == 1
+                color_image[i, j] = RGBf(1, 0, 0)
+            else
+                color_image[i, j] = RGBf(0.5, 0, 0)
+            end
         else
-            gray_val = clamp(grayscale_image[i, j], 0f0, 1f0)
+            gray_val = clamp(grayscale_image[i, j], 0, 1)
             color_image[i, j] = RGBf(gray_val, gray_val, gray_val)
         end
     end
@@ -184,9 +190,8 @@ mask[500:550] .= true
 mask[600:601] .= true
 mask[400:401] .= true
 x = load_binary_mnist()[:, 1]
-fig = sample_and_save2(x, mask, sampler, binary = false)
+fig = sample_and_save(x, mask, sampler, binary = false)
 
-# serialize("vaeac_model.jls", model)
 
 function condition(model::VAEAC, xₛ::Vector{Float32}, known_ii::SBitSet)
     mask = fill(false, length(xₛ))
