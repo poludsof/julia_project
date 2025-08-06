@@ -9,12 +9,20 @@ using Flux.Optimise: update!, Adam
 using CairoMakie
 import ProbAbEx as PAE
 using Serialization
+using StaticBitSets
+
 
 # ========== Model Definition ==========
 struct VAEAC
     proposal_net::Chain
     prior_net::Chain
     decoder_net::Chain
+end
+
+struct ConditionedVAEAC
+    model::VAEAC
+    xₛ::Vector{Float32}
+    mask::Vector{Bool}
 end
 
 function VAEAC()
@@ -135,8 +143,7 @@ function train()
 end
 
 # ========== Run training ==========
-model = train()
-
+# model = train()
 
 # ========== Sample function ==========
 function sample_and_save2(x, mask, model; binary=true)
@@ -171,11 +178,51 @@ function sample_and_save2(x, mask, model; binary=true)
     fig
 end
 
+sampler = deserialize("/home/poludsof/ProbAbEx/models/vaeac_model.jls")
 mask = falses(784, 1)
 mask[500:550] .= true
 mask[600:601] .= true
 mask[400:401] .= true
 x = load_binary_mnist()[:, 1]
-fig = sample_and_save2(x, mask, model, binary = true)
+fig = sample_and_save2(x, mask, sampler, binary = false)
 
-serialize("vaeac_model.jls", model)
+# serialize("vaeac_model.jls", model)
+
+function condition(model::VAEAC, xₛ::Vector{Float32}, known_ii::SBitSet)
+    mask = fill(false, length(xₛ))
+    for i in known_ii
+        mask[i] = true
+    end
+    ConditionedVAEAC(model, xₛ, mask)
+end
+
+function sample_all(r::ConditionedVAEAC, n::Integer)
+    u = zeros(Float32, length(r.xₛ), n)
+    sample_all!(u, r)
+end
+
+function sample_all!(u::AbstractMatrix{Float32}, r::ConditionedVAEAC)
+    xₛ = r.xₛ
+    mask = r.mask
+    model = r.model
+
+    input_dim = length(xₛ)
+    batch_size = size(u, 2)
+
+    xₛ_batch = repeat(xₛ, 1, batch_size)
+    mask_batch = repeat(mask, 1, batch_size)
+
+    logits, _, _, _, _ = forward(xₛ_batch, mask_batch, model)
+    x_hat = σ.(logits)
+
+    for col in 1:batch_size
+        for row in 1:input_dim
+            u[row, col] = mask[row] ? xₛ[row] : (x_hat[row, col] > 0.5f0 ? 1f0 : 0f0)
+        end
+    end
+    return u
+end
+
+known_ii = SBitSet{13, UInt64}(collect(500:550))
+conditioned = condition(sampler, x, known_ii)
+samples = sample_all(conditioned, 5)  # (784, 5)
